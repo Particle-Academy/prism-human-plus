@@ -17,7 +17,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: dom, curl, json, mbstring
+          extensions: dom, curl, fileinfo, json, mbstring
           coverage: none
       - run: composer update --prefer-dist --no-interaction
       - run: composer test
