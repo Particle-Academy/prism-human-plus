@@ -6,6 +6,7 @@ namespace Prism\HumanPlus\Stores;
 
 use Closure;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
+use Illuminate\Contracts\Cache\LockProvider;
 use Illuminate\Contracts\Encryption\Encrypter;
 use Prism\HumanPlus\Contracts\AttachmentStore;
 use Prism\HumanPlus\Data\Participant;
@@ -38,7 +39,7 @@ final readonly class LaravelAttachmentStore implements AttachmentStore
         if (! is_array($value)) {
             throw new HumanPlusException('Stored Human+ attachment is malformed.');
         }
-        $invitation = new SurfaceInvitation((string) $value['relay'], (string) $value['session'], (string) $value['token'], (string) $value['surface'], (string) $value['application']);
+        $invitation = new SurfaceInvitation((string) $value['relay'], (string) $value['session'], (string) $value['token'], (string) $value['surface'], (string) $value['application'], (bool) ($value['allow_insecure_loopback'] ?? false));
         $participant = new Participant((string) $value['participant_id'], (string) $value['participant_name'], (string) $value['participant_color']);
 
         return new SurfaceAttachment((string) $value['id'], (string) $value['owner'], $invitation, $participant, (string) $value['client'], (int) $value['generation'], AttachmentState::from((string) $value['state']));
@@ -52,6 +53,7 @@ final readonly class LaravelAttachmentStore implements AttachmentStore
         $value = [
             'id' => $attachment->id, 'owner' => $attachment->owner, 'relay' => $attachment->invitation->relayBaseUrl,
             'session' => $attachment->invitation->sessionId, 'token' => $attachment->invitation->token,
+            'allow_insecure_loopback' => $attachment->invitation->allowInsecureLoopback,
             'surface' => $attachment->invitation->surfaceId, 'application' => $attachment->invitation->application,
             'participant_id' => $attachment->participant->id, 'participant_name' => $attachment->participant->name,
             'participant_color' => $attachment->participant->color, 'client' => $attachment->clientId,
@@ -64,10 +66,10 @@ final readonly class LaravelAttachmentStore implements AttachmentStore
     public function lock(string $id, Closure $callback): mixed
     {
         $repository = $this->cache->store($this->store);
-        if (! method_exists($repository, 'lock')) {
+        if (! $repository->getStore() instanceof LockProvider) {
             throw new HumanPlusException('Configured Human+ attachment cache does not support atomic locks.');
         }
 
-        return $repository->lock($this->prefix.'lock:'.$id, 45)->block(5, $callback);
+        return $repository->getStore()->lock($this->prefix.'lock:'.$id, 45)->block(5, $callback);
     }
 }

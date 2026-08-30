@@ -9,6 +9,7 @@ use Prism\HumanPlus\Data\SurfaceAttachment;
 use Prism\HumanPlus\Data\SurfaceInvitation;
 use Prism\HumanPlus\Enums\AttachmentState;
 use Prism\HumanPlus\Enums\Priority;
+use Prism\HumanPlus\Exceptions\AttachmentUnauthorized;
 use Prism\HumanPlus\Exceptions\HumanPlusException;
 use Prism\HumanPlus\Exceptions\SurfaceUnavailable;
 use Prism\HumanPlus\Exceptions\ToolRefused;
@@ -66,7 +67,7 @@ it('refuses before discovery when trust is undeclared', function (): void {
     $manager = new HumanPlusManager($transport, new InMemoryAttachmentStore, TrustPolicy::undeclared(), new ResultGuard);
     $attachment = attachFixture($manager);
 
-    expect(fn () => $manager->tools($attachment->id))->toThrow(ToolRefused::class, 'undeclared')
+    expect(fn () => $manager->tools('session:one', $attachment->id))->toThrow(ToolRefused::class, 'undeclared')
         ->and($transport->notifications)->toBe([]);
 });
 
@@ -74,8 +75,8 @@ it('discovers allowed tools and guards their result', function (): void {
     $manager = new HumanPlusManager(fakeRelayTransport(), new InMemoryAttachmentStore, TrustPolicy::allowing(['sheet_read']), new ResultGuard);
     $attachment = attachFixture($manager);
 
-    expect($manager->tools($attachment->id))->toHaveCount(1)
-        ->and($manager->call($attachment->id, 'sheet_read'))->toContain('<untrusted-tool-output')
+    expect($manager->tools('session:one', $attachment->id))->toHaveCount(1)
+        ->and($manager->call('session:one', $attachment->id, 'sheet_read'))->toContain('<untrusted-tool-output')
         ->toContain('shared state');
 });
 
@@ -83,7 +84,7 @@ it('announces participant activity with priority and target', function (): void 
     $transport = fakeRelayTransport();
     $manager = new HumanPlusManager($transport, new InMemoryAttachmentStore, TrustPolicy::allowing(['sheet_read']), new ResultGuard);
     $attachment = attachFixture($manager);
-    $manager->announce($attachment->id, new Activity('editing', 'cell:A1', Priority::Attention, 'run-7'));
+    $manager->announce('session:one', $attachment->id, new Activity('editing', 'cell:A1', Priority::Attention, 'run-7'));
 
     expect($transport->notifications)->toHaveCount(1)
         ->and($transport->notifications[0]['params']['actor']['id'])->toBe('agent:prism')
@@ -97,17 +98,27 @@ it('makes session gone terminal for the attachment', function (): void {
     $attachment = attachFixture($manager);
     $transport->gone = true;
 
-    expect(fn () => $manager->tools($attachment->id))->toThrow(SurfaceUnavailable::class)
-        ->and($manager->status($attachment->id)->state)->toBe(AttachmentState::SurfaceUnavailable)
-        ->and(fn () => $manager->tools($attachment->id))->toThrow(HumanPlusException::class, 'create a new attachment');
+    expect(fn () => $manager->tools('session:one', $attachment->id))->toThrow(SurfaceUnavailable::class)
+        ->and($manager->status('session:one', $attachment->id)->state)->toBe(AttachmentState::SurfaceUnavailable)
+        ->and(fn () => $manager->tools('session:one', $attachment->id))->toThrow(HumanPlusException::class, 'create a new attachment');
 });
 
 it('turns trusted surface definitions into Prism tools with local approval policy', function (): void {
     $manager = new HumanPlusManager(fakeRelayTransport(), new InMemoryAttachmentStore, TrustPolicy::allowing(['sheet_read']), new ResultGuard);
     $attachment = attachFixture($manager);
-    $tools = (new HumanPlusToolset($manager))->forAttachment($attachment->id, ['sheet_read']);
+    $tools = (new HumanPlusToolset($manager))->forAttachment('session:one', $attachment->id, ['sheet_read']);
 
     expect($tools)->toHaveCount(1)
         ->and($tools[0]->name())->toBe('sheet_read')
         ->and($tools[0]->needsApproval())->toBeTrue();
+});
+
+it('refuses every operation when the attachment owner does not match', function (): void {
+    $manager = new HumanPlusManager(fakeRelayTransport(), new InMemoryAttachmentStore, TrustPolicy::allowing(['sheet_read']), new ResultGuard);
+    $attachment = attachFixture($manager);
+
+    expect(fn () => $manager->tools('session:two', $attachment->id))->toThrow(AttachmentUnauthorized::class, 'does not belong')
+        ->and(fn () => $manager->status('session:two', $attachment->id))->toThrow(AttachmentUnauthorized::class, 'does not belong')
+        ->and(fn () => $manager->announce('session:two', $attachment->id, new Activity('editing', 'cell:A1')))->toThrow(AttachmentUnauthorized::class, 'does not belong')
+        ->and(fn () => $manager->detach('session:two', $attachment->id))->toThrow(AttachmentUnauthorized::class, 'does not belong');
 });

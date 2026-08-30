@@ -13,6 +13,7 @@ final class SurfaceTool extends Tool
 {
     public function __construct(
         private readonly HumanPlusManager $humanPlus,
+        private readonly string|object $owner,
         private readonly string $attachmentId,
         private readonly ToolDefinition $definition,
         bool $requiresApproval,
@@ -33,6 +34,6 @@ final class SurfaceTool extends Tool
     public function __invoke(mixed ...$arguments): string
     {
         /** @var array<string, mixed> $arguments */
-        return $this->humanPlus->call($this->attachmentId, $this->definition->name, $arguments);
+        return $this->humanPlus->call($this->owner, $this->attachmentId, $this->definition->name, $arguments);
     }
 }

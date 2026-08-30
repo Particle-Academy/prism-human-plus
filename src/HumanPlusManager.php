@@ -46,19 +46,19 @@ final class HumanPlusManager
     }
 
     /** @return list<ToolDefinition> */
-    public function tools(string $id): array
+    public function tools(string|object $owner, string $id): array
     {
         $this->trust->assertDeclared();
 
-        return $this->store->lock($id, fn (): array => $this->discover($this->required($id)));
+        return $this->store->lock($id, fn (): array => $this->discover($this->required($owner, $id)));
     }
 
     /** @param array<string, mixed> $arguments */
-    public function call(string $id, string $tool, array $arguments = []): string
+    public function call(string|object $owner, string $id, string $tool, array $arguments = []): string
     {
-        return $this->store->lock($id, function () use ($id, $tool, $arguments): string {
+        return $this->store->lock($id, function () use ($owner, $id, $tool, $arguments): string {
             $this->trust->assertDeclared();
-            $attachment = $this->required($id);
+            $attachment = $this->required($owner, $id);
             $definition = null;
             foreach ($this->discover($attachment) as $candidate) {
                 if ($candidate->name === $tool) {
@@ -97,10 +97,10 @@ final class HumanPlusManager
         });
     }
 
-    public function announce(string $id, Activity $activity): void
+    public function announce(string|object $owner, string $id, Activity $activity): void
     {
-        $this->store->lock($id, function () use ($id, $activity): void {
-            $attachment = $this->required($id);
+        $this->store->lock($id, function () use ($owner, $id, $activity): void {
+            $attachment = $this->required($owner, $id);
             $this->transport->notify($attachment, [
                 'jsonrpc' => '2.0', 'method' => 'notifications/human-plus/activity',
                 'params' => $activity->toArray($attachment->participant, $attachment),
@@ -108,20 +108,20 @@ final class HumanPlusManager
         });
     }
 
-    public function markUnavailable(string $id): SurfaceAttachment
+    public function markUnavailable(string|object $owner, string $id): SurfaceAttachment
     {
-        return $this->transition($id, AttachmentState::SurfaceUnavailable);
+        return $this->transition($owner, $id, AttachmentState::SurfaceUnavailable);
     }
 
-    public function markUnauthorized(string $id): SurfaceAttachment
+    public function markUnauthorized(string|object $owner, string $id): SurfaceAttachment
     {
-        return $this->transition($id, AttachmentState::Unauthorized);
+        return $this->transition($owner, $id, AttachmentState::Unauthorized);
     }
 
-    public function detach(string $id): SurfaceAttachment
+    public function detach(string|object $owner, string $id): SurfaceAttachment
     {
-        return $this->store->lock($id, function () use ($id): SurfaceAttachment {
-            $attachment = $this->required($id);
+        return $this->store->lock($id, function () use ($owner, $id): SurfaceAttachment {
+            $attachment = $this->required($owner, $id);
             $this->transport->detach($attachment);
             $next = $attachment->transition(AttachmentState::Detached);
             $this->store->put($next, $attachment->generation);
@@ -130,19 +130,22 @@ final class HumanPlusManager
         });
     }
 
-    public function status(string $id): SurfaceAttachment
+    public function status(string|object $owner, string $id): SurfaceAttachment
     {
         $attachment = $this->store->get($id);
         if ($attachment === null) {
             throw new HumanPlusException('Human+ attachment does not exist.');
         }
+        if (! hash_equals($attachment->owner, OwnerAddress::from($owner))) {
+            throw new AttachmentUnauthorized('Human+ attachment does not belong to this owner.');
+        }
 
         return $attachment;
     }
 
-    private function required(string $id): SurfaceAttachment
+    private function required(string|object $owner, string $id): SurfaceAttachment
     {
-        $attachment = $this->status($id);
+        $attachment = $this->status($owner, $id);
         if ($attachment->state !== AttachmentState::Attached) {
             throw new HumanPlusException(sprintf('Human+ attachment is [%s]; create a new attachment to join another surface lifecycle.', $attachment->state->value));
         }
@@ -174,10 +177,10 @@ final class HumanPlusManager
         return $allowed;
     }
 
-    private function transition(string $id, AttachmentState $state): SurfaceAttachment
+    private function transition(string|object $owner, string $id, AttachmentState $state): SurfaceAttachment
     {
-        return $this->store->lock($id, function () use ($id, $state): SurfaceAttachment {
-            $attachment = $this->required($id);
+        return $this->store->lock($id, function () use ($owner, $id, $state): SurfaceAttachment {
+            $attachment = $this->required($owner, $id);
             $next = $attachment->transition($state);
             $this->store->put($next, $attachment->generation);
 

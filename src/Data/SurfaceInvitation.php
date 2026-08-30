@@ -14,10 +14,12 @@ final readonly class SurfaceInvitation
         public string $token,
         public string $surfaceId,
         public string $application,
+        public bool $allowInsecureLoopback = false,
     ) {
         $scheme = parse_url($relayBaseUrl, PHP_URL_SCHEME);
         $host = parse_url($relayBaseUrl, PHP_URL_HOST);
-        if ($scheme !== 'https' || ! is_string($host) || $host === '') {
+        $local = $allowInsecureLoopback && $scheme === 'http' && in_array($host, ['127.0.0.1', '::1', 'localhost'], true);
+        if (($scheme !== 'https' && ! $local) || ! is_string($host) || $host === '') {
             throw new InvalidArgumentException('A Human+ invitation requires an absolute HTTPS relay URL.');
         }
         if (! preg_match('/^[A-Za-z0-9_-]{4,64}$/', $sessionId)) {
