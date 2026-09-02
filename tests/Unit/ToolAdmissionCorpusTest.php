@@ -89,7 +89,7 @@ function admitFromCorpus(array $case): array
 }
 
 it('is the whole suite, not a subset someone trimmed to green', function (): void {
-    expect(toolAdmissionCorpus())->toHaveCount(20);
+    expect(toolAdmissionCorpus())->toHaveCount(25);
 });
 
 it('still decides each case the way the corpus recorded', function (array $case): void {
@@ -111,22 +111,48 @@ it('reserves confirmation for the human even under WILDCARD trust', function ():
         ->and($decision['admitted'])->toBeFalse();
 });
 
-it('RESERVES a confirm name with a trailing newline, which TypeScript does not', function (): void {
-    // G-33, and the reason this suite exists. `$` in PCRE matches before a
-    // final newline, so `terminal_confirm\n` is reserved here and in Python —
-    // and NOT in the TypeScript port, where `$` without the multiline flag
-    // matches only at the very end.
+it('reserves a confirm name whatever INVISIBLE character trails it', function (): void {
+    // G-33 and G-36, both CLOSED — and this is the test that keeps them closed.
     //
-    // A surface chooses its own tool names, so the newline is attacker-
-    // controlled: the same surface is safe against a PHP or Python agent and
-    // hands the confirmation tool to a TypeScript one.
+    // A tool name is chosen by the SURFACE, and `$` anchors at the end. Before
+    // the name was normalised, `terminal_confirm ` — one trailing space — was
+    // admitted to the agent HERE and in both ports, under every trust level
+    // including the wildcard, with nothing raised anywhere. The same name with
+    // a trailing NEWLINE was admitted in the TypeScript port only, because `$`
+    // matches before a final newline in PCRE and Python and not in JavaScript.
     //
-    // Asserted in the POSITIVE, because this side is the correct one.
-    $case = collect(toolAdmissionCorpus())->firstWhere('id', 'adm-0011');
+    // The normalisation strips an EXPLICIT codepoint set, spelled identically
+    // in all three languages. That detail is the fix: the built-ins disagree
+    // three ways — trim() here strips no Unicode whitespace at all, JavaScript's
+    // strips every one of these including U+FEFF, and Python's strips them
+    // except U+FEFF — so reaching for a built-in would have closed one hole and
+    // opened three new divergences.
+    $reserved = ['adm-0005', 'adm-0011', 'adm-0019', 'adm-0020', 'adm-0021', 'adm-0022', 'adm-0023', 'adm-0024', 'adm-0025'];
 
-    expect(admitFromCorpus($case)['allows'])->toBeFalse()
-        ->and($case['admission']['py']['allows'])->toBeFalse()
-        ->and($case['admission']['ts']['allows'])->toBeTrue();
+    foreach ($reserved as $id) {
+        $case = collect(toolAdmissionCorpus())->firstWhere('id', $id);
+        $decision = admitFromCorpus($case);
+
+        expect($decision['allows'])->toBeFalse($id)
+            ->and($decision['admitted'])->toBeFalse($id)
+            // And every port agrees, which is the half a single-language suite
+            // cannot check and the half that was actually broken.
+            ->and($case['admission']['ts']['allows'])->toBeFalse($id)
+            ->and($case['admission']['py']['allows'])->toBeFalse($id);
+    }
+});
+
+it('still admits the names that merely LOOK like a reserved verb', function (): void {
+    // The other half of a reservation, and the half a fix like this can break.
+    // Normalising only ever reserves MORE names, so these are what proves it did
+    // not over-reach: `confirmation_status` and `preconfirm` stay callable.
+    foreach (['adm-0009', 'adm-0010'] as $id) {
+        $case = collect(toolAdmissionCorpus())->firstWhere('id', $id);
+
+        expect(admitFromCorpus($case)['admitted'])->toBeTrue($id)
+            ->and($case['admission']['ts']['admitted'])->toBeTrue($id)
+            ->and($case['admission']['py']['admitted'])->toBeTrue($id);
+    }
 });
 
 it('digests a tool with NO schema differently from both ports', function (): void {
@@ -145,37 +171,13 @@ it('digests a tool with NO schema differently from both ports', function (): voi
         ->and($case['admission']['ts']['digest'])->toBe($case['admission']['py']['digest']);
 });
 
-it('ADMITS a confirm name with one trailing space, and so does every other language', function (): void {
-    // G-36, and the worst finding in this suite precisely BECAUSE all three
-    // agree. `$` tolerates at most one trailing newline in PCRE and Python and
-    // none in JavaScript, and nothing normalises the name before matching — so
-    // a surface that calls its tool `terminal_confirm ` gets the confirmation
-    // tool handed to the agent in every language.
-    //
-    // A cross-language corpus cannot find this by COMPARING languages; there is
-    // nothing to compare. It is asserted here in the POSITIVE, describing the
-    // hole rather than a guarantee, so that the day someone closes it this row
-    // goes red and forces the corpus and the register to move with the fix.
-    //
-    // adm-0020 is the same hole reached by a second newline, which is why a fix
-    // that only special-cases `\n` is visibly not enough.
-    foreach (['adm-0019', 'adm-0020'] as $id) {
-        $case = collect(toolAdmissionCorpus())->firstWhere('id', $id);
-
-        expect($case['policy']['mode'])->toBe('everyTool')
-            ->and(admitFromCorpus($case)['admitted'])->toBeTrue()
-            ->and($case['admission']['ts']['admitted'])->toBeTrue()
-            ->and($case['admission']['py']['admitted'])->toBeTrue();
-    }
-});
-
-it('agrees with BOTH ports on every reserved-name row except the newline', function (): void {
+it('agrees with BOTH ports on every reserved-name row', function (): void {
     // The reservation itself is sound: start-of-string, underscore boundary,
     // case-insensitivity, the full verb set, and the two names that merely
     // CONTAIN a verb all agree in three languages. Stated as an assertion so
     // that a port narrowing the pattern shows up here rather than in a row
     // that was already red.
-    $names = ['adm-0005', 'adm-0006', 'adm-0007', 'adm-0008', 'adm-0009', 'adm-0010'];
+    $names = ['adm-0005', 'adm-0006', 'adm-0007', 'adm-0008', 'adm-0009', 'adm-0010', 'adm-0011', 'adm-0019', 'adm-0020', 'adm-0021', 'adm-0022', 'adm-0023', 'adm-0024', 'adm-0025'];
 
     $disagreements = collect(toolAdmissionCorpus())
         ->filter(fn (array $case): bool => in_array($case['id'], $names, true))

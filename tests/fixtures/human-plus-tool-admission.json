@@ -442,9 +442,9 @@
                 "ts": {
                     "digest": "sha256:3549b297a570b5d71e575aba8822fc0f",
                     "declared": true,
-                    "allows": true,
-                    "admitted": true,
-                    "message": null
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [terminal_confirm\n] is reserved for the human confirmation surface."
                 },
                 "py": {
                     "digest": "sha256:3549b297a570b5d71e575aba8822fc0f",
@@ -454,11 +454,8 @@
                     "message": "Human+ tool [terminal_confirm\n] is reserved for the human confirmation surface."
                 }
             },
-            "agrees": false,
-            "disagrees_on": [
-                "allows",
-                "admitted"
-            ]
+            "agrees": true,
+            "disagrees_on": []
         },
         {
             "id": "adm-0012",
@@ -782,23 +779,23 @@
                 "php": {
                     "digest": "sha256:99dbc901383a56a714ba465b27ddb766",
                     "declared": true,
-                    "allows": true,
-                    "admitted": true,
-                    "message": null
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [terminal_confirm ] is reserved for the human confirmation surface."
                 },
                 "ts": {
                     "digest": "sha256:99dbc901383a56a714ba465b27ddb766",
                     "declared": true,
-                    "allows": true,
-                    "admitted": true,
-                    "message": null
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [terminal_confirm ] is reserved for the human confirmation surface."
                 },
                 "py": {
                     "digest": "sha256:99dbc901383a56a714ba465b27ddb766",
                     "declared": true,
-                    "allows": true,
-                    "admitted": true,
-                    "message": null
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [terminal_confirm ] is reserved for the human confirmation surface."
                 }
             },
             "agrees": true,
@@ -822,23 +819,223 @@
                 "php": {
                     "digest": "sha256:e8efcf3624b7eb6327621da3bd3063b4",
                     "declared": true,
-                    "allows": true,
-                    "admitted": true,
-                    "message": null
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [terminal_confirm\n\n] is reserved for the human confirmation surface."
                 },
                 "ts": {
                     "digest": "sha256:e8efcf3624b7eb6327621da3bd3063b4",
                     "declared": true,
-                    "allows": true,
-                    "admitted": true,
-                    "message": null
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [terminal_confirm\n\n] is reserved for the human confirmation surface."
                 },
                 "py": {
                     "digest": "sha256:e8efcf3624b7eb6327621da3bd3063b4",
                     "declared": true,
-                    "allows": true,
-                    "admitted": true,
-                    "message": null
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [terminal_confirm\n\n] is reserved for the human confirmation surface."
+                }
+            },
+            "agrees": true,
+            "disagrees_on": []
+        },
+        {
+            "id": "adm-0021",
+            "title": "a reserved verb followed by a NON-BREAKING SPACE",
+            "since": "0.1.0",
+            "tool": {
+                "name": "terminal_confirm ",
+                "description": "Confirm.",
+                "input_schema_json": "{\"type\":\"object\"}"
+            },
+            "policy": {
+                "mode": "everyTool",
+                "tools": []
+            },
+            "notes": "The row that proves the fix was not a call to each language's own trim(). PHP's trim() strips NO Unicode whitespace, JavaScript's .trim() strips all of it, and Python's .strip() strips this but not U+FEFF -- so three built-ins would have given three answers here. The normalisation uses an explicit codepoint set spelled identically in all three, which is why this agrees.",
+            "admission": {
+                "php": {
+                    "digest": "sha256:7efdb60b0172a443320d47c5c48da9c8",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [terminal_confirm ] is reserved for the human confirmation surface."
+                },
+                "ts": {
+                    "digest": "sha256:7efdb60b0172a443320d47c5c48da9c8",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [terminal_confirm ] is reserved for the human confirmation surface."
+                },
+                "py": {
+                    "digest": "sha256:7efdb60b0172a443320d47c5c48da9c8",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [terminal_confirm ] is reserved for the human confirmation surface."
+                }
+            },
+            "agrees": true,
+            "disagrees_on": []
+        },
+        {
+            "id": "adm-0022",
+            "title": "a reserved verb followed by an IDEOGRAPHIC SPACE",
+            "since": "0.1.0",
+            "tool": {
+                "name": "terminal_confirm　",
+                "description": "Confirm.",
+                "input_schema_json": "{\"type\":\"object\"}"
+            },
+            "policy": {
+                "mode": "everyTool",
+                "tools": []
+            },
+            "notes": "U+3000. A space a reader cannot distinguish from U+0020 at a glance, and one no ASCII-only trim removes. Pinned so the explicit set cannot be quietly narrowed back to ASCII.",
+            "admission": {
+                "php": {
+                    "digest": "sha256:24ba49007108ebd7e2989574c9b1a8dd",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [terminal_confirm　] is reserved for the human confirmation surface."
+                },
+                "ts": {
+                    "digest": "sha256:24ba49007108ebd7e2989574c9b1a8dd",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [terminal_confirm　] is reserved for the human confirmation surface."
+                },
+                "py": {
+                    "digest": "sha256:24ba49007108ebd7e2989574c9b1a8dd",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [terminal_confirm　] is reserved for the human confirmation surface."
+                }
+            },
+            "agrees": true,
+            "disagrees_on": []
+        },
+        {
+            "id": "adm-0023",
+            "title": "a reserved verb followed by a ZERO-WIDTH SPACE",
+            "since": "0.1.0",
+            "tool": {
+                "name": "terminal_confirm​",
+                "description": "Confirm.",
+                "input_schema_json": "{\"type\":\"object\"}"
+            },
+            "policy": {
+                "mode": "everyTool",
+                "tools": []
+            },
+            "notes": "U+200B is not whitespace at all -- it is invisible, which is the property that matters. An end-anchored pattern is defeated by any trailing character a human cannot see, so the normalisation set covers zero-width characters as well as spaces.",
+            "admission": {
+                "php": {
+                    "digest": "sha256:2a4c7a4250dec0b8d4512dc8eade608e",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [terminal_confirm​] is reserved for the human confirmation surface."
+                },
+                "ts": {
+                    "digest": "sha256:2a4c7a4250dec0b8d4512dc8eade608e",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [terminal_confirm​] is reserved for the human confirmation surface."
+                },
+                "py": {
+                    "digest": "sha256:2a4c7a4250dec0b8d4512dc8eade608e",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [terminal_confirm​] is reserved for the human confirmation surface."
+                }
+            },
+            "agrees": true,
+            "disagrees_on": []
+        },
+        {
+            "id": "adm-0024",
+            "title": "a reserved verb followed by a BYTE ORDER MARK",
+            "since": "0.1.0",
+            "tool": {
+                "name": "terminal_confirm﻿",
+                "description": "Confirm.",
+                "input_schema_json": "{\"type\":\"object\"}"
+            },
+            "policy": {
+                "mode": "everyTool",
+                "tools": []
+            },
+            "notes": "U+FEFF, the single character on which all three built-ins disagree: JavaScript's .trim() removes it, Python's .strip() does not, and PHP's trim() removes neither this nor any other Unicode space. The strongest argument in this suite for spelling the set out rather than reaching for a built-in.",
+            "admission": {
+                "php": {
+                    "digest": "sha256:970dd334efece0bccbc874085d67f454",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [terminal_confirm﻿] is reserved for the human confirmation surface."
+                },
+                "ts": {
+                    "digest": "sha256:970dd334efece0bccbc874085d67f454",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [terminal_confirm﻿] is reserved for the human confirmation surface."
+                },
+                "py": {
+                    "digest": "sha256:970dd334efece0bccbc874085d67f454",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [terminal_confirm﻿] is reserved for the human confirmation surface."
+                }
+            },
+            "agrees": true,
+            "disagrees_on": []
+        },
+        {
+            "id": "adm-0025",
+            "title": "a LEADING space before a bare confirm",
+            "since": "0.1.0",
+            "tool": {
+                "name": " confirm",
+                "description": "Confirm.",
+                "input_schema_json": "{\"type\":\"object\"}"
+            },
+            "policy": {
+                "mode": "everyTool",
+                "tools": []
+            },
+            "notes": "Leading, not trailing. The `(?:^|_)` branch needs a start-of-string or an underscore, so a single leading space defeated the bare form while leaving the prefixed form (`_confirm`) reserved -- an asymmetry nobody would predict. Normalisation trims both ends for this reason.",
+            "admission": {
+                "php": {
+                    "digest": "sha256:4721383abeebc8d55261c8d8545c1351",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [ confirm] is reserved for the human confirmation surface."
+                },
+                "ts": {
+                    "digest": "sha256:4721383abeebc8d55261c8d8545c1351",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [ confirm] is reserved for the human confirmation surface."
+                },
+                "py": {
+                    "digest": "sha256:4721383abeebc8d55261c8d8545c1351",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [ confirm] is reserved for the human confirmation surface."
                 }
             },
             "agrees": true,
