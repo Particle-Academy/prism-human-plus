@@ -50,6 +50,9 @@ final readonly class TrustPolicy
 
     public function assertAllows(ToolDefinition $tool): void
     {
+        if (! self::isWellFormedName($tool->name)) {
+            throw new ToolRefused(sprintf('Human+ tool name [%s] is not a well-formed tool name.', $tool->name));
+        }
         if ($this->isHumanOnly($tool->name)) {
             throw new ToolRefused(sprintf('Human+ tool [%s] is reserved for the human confirmation surface.', $tool->name));
         }
@@ -64,7 +67,40 @@ final readonly class TrustPolicy
 
     public function allows(string $name): bool
     {
-        return ! $this->isHumanOnly($name) && ($this->everyTool || in_array($name, $this->allowedTools ?? [], true));
+        return self::isWellFormedName($name)
+            && ! $this->isHumanOnly($name)
+            && ($this->everyTool || in_array($name, $this->allowedTools ?? [], true));
+    }
+
+    /**
+     * What a tool name may BE, checked before anything is asked about it.
+     *
+     * ASCII letters and digits, underscore, dot, colon and hyphen; a letter,
+     * digit or underscore first; at most 128 characters. That accepts every
+     * name this ecosystem actually uses — `terminal_confirm`, `sheet_write`,
+     * `web_search`, `fetch_url`, namespaced `vendor.tool` — and refuses
+     * everything else.
+     *
+     * ASCII-ONLY IS THE POINT, and it is what makes a homoglyph impossible. A
+     * surface can otherwise declare `сonfirm` with a Cyrillic `с`: it is not
+     * the reserved word, so the reservation correctly does not fire, and a
+     * human reading the allowlist cannot tell it from the real one. That is not
+     * a hole in the regex — it is a hole in the HUMAN's ability to audit the
+     * trust config, which is the other half of the same trust model.
+     *
+     * Interior whitespace and control characters go the same way, which makes
+     * this the outer guard for the class of problem the trailing-whitespace
+     * normalisation below fixed one instance of. Both are kept: normalisation
+     * stays as defence in depth in case this is ever relaxed.
+     *
+     * Anchored with `\z`, never `$` — `$` in PCRE also matches before a final
+     * newline, which is precisely how `terminal_confirm\n` slipped past the
+     * reservation before (G-33/G-36). A validator with that bug in it would
+     * accept the very names it exists to refuse.
+     */
+    private static function isWellFormedName(string $name): bool
+    {
+        return preg_match('/^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,127}\z/', $name) === 1;
     }
 
     /**

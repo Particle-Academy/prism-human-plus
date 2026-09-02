@@ -437,21 +437,21 @@
                     "declared": true,
                     "allows": false,
                     "admitted": false,
-                    "message": "Human+ tool [terminal_confirm\n] is reserved for the human confirmation surface."
+                    "message": "Human+ tool name [terminal_confirm\n] is not a well-formed tool name."
                 },
                 "ts": {
                     "digest": "sha256:3549b297a570b5d71e575aba8822fc0f",
                     "declared": true,
                     "allows": false,
                     "admitted": false,
-                    "message": "Human+ tool [terminal_confirm\n] is reserved for the human confirmation surface."
+                    "message": "Human+ tool name [terminal_confirm\n] is not a well-formed tool name."
                 },
                 "py": {
                     "digest": "sha256:3549b297a570b5d71e575aba8822fc0f",
                     "declared": true,
                     "allows": false,
                     "admitted": false,
-                    "message": "Human+ tool [terminal_confirm\n] is reserved for the human confirmation surface."
+                    "message": "Human+ tool name [terminal_confirm\n] is not a well-formed tool name."
                 }
             },
             "agrees": true,
@@ -781,21 +781,21 @@
                     "declared": true,
                     "allows": false,
                     "admitted": false,
-                    "message": "Human+ tool [terminal_confirm ] is reserved for the human confirmation surface."
+                    "message": "Human+ tool name [terminal_confirm ] is not a well-formed tool name."
                 },
                 "ts": {
                     "digest": "sha256:99dbc901383a56a714ba465b27ddb766",
                     "declared": true,
                     "allows": false,
                     "admitted": false,
-                    "message": "Human+ tool [terminal_confirm ] is reserved for the human confirmation surface."
+                    "message": "Human+ tool name [terminal_confirm ] is not a well-formed tool name."
                 },
                 "py": {
                     "digest": "sha256:99dbc901383a56a714ba465b27ddb766",
                     "declared": true,
                     "allows": false,
                     "admitted": false,
-                    "message": "Human+ tool [terminal_confirm ] is reserved for the human confirmation surface."
+                    "message": "Human+ tool name [terminal_confirm ] is not a well-formed tool name."
                 }
             },
             "agrees": true,
@@ -821,21 +821,21 @@
                     "declared": true,
                     "allows": false,
                     "admitted": false,
-                    "message": "Human+ tool [terminal_confirm\n\n] is reserved for the human confirmation surface."
+                    "message": "Human+ tool name [terminal_confirm\n\n] is not a well-formed tool name."
                 },
                 "ts": {
                     "digest": "sha256:e8efcf3624b7eb6327621da3bd3063b4",
                     "declared": true,
                     "allows": false,
                     "admitted": false,
-                    "message": "Human+ tool [terminal_confirm\n\n] is reserved for the human confirmation surface."
+                    "message": "Human+ tool name [terminal_confirm\n\n] is not a well-formed tool name."
                 },
                 "py": {
                     "digest": "sha256:e8efcf3624b7eb6327621da3bd3063b4",
                     "declared": true,
                     "allows": false,
                     "admitted": false,
-                    "message": "Human+ tool [terminal_confirm\n\n] is reserved for the human confirmation surface."
+                    "message": "Human+ tool name [terminal_confirm\n\n] is not a well-formed tool name."
                 }
             },
             "agrees": true,
@@ -861,21 +861,21 @@
                     "declared": true,
                     "allows": false,
                     "admitted": false,
-                    "message": "Human+ tool [terminal_confirm ] is reserved for the human confirmation surface."
+                    "message": "Human+ tool name [terminal_confirm ] is not a well-formed tool name."
                 },
                 "ts": {
                     "digest": "sha256:7efdb60b0172a443320d47c5c48da9c8",
                     "declared": true,
                     "allows": false,
                     "admitted": false,
-                    "message": "Human+ tool [terminal_confirm ] is reserved for the human confirmation surface."
+                    "message": "Human+ tool name [terminal_confirm ] is not a well-formed tool name."
                 },
                 "py": {
                     "digest": "sha256:7efdb60b0172a443320d47c5c48da9c8",
                     "declared": true,
                     "allows": false,
                     "admitted": false,
-                    "message": "Human+ tool [terminal_confirm ] is reserved for the human confirmation surface."
+                    "message": "Human+ tool name [terminal_confirm ] is not a well-formed tool name."
                 }
             },
             "agrees": true,
@@ -901,21 +901,21 @@
                     "declared": true,
                     "allows": false,
                     "admitted": false,
-                    "message": "Human+ tool [terminal_confirm　] is reserved for the human confirmation surface."
+                    "message": "Human+ tool name [terminal_confirm　] is not a well-formed tool name."
                 },
                 "ts": {
                     "digest": "sha256:24ba49007108ebd7e2989574c9b1a8dd",
                     "declared": true,
                     "allows": false,
                     "admitted": false,
-                    "message": "Human+ tool [terminal_confirm　] is reserved for the human confirmation surface."
+                    "message": "Human+ tool name [terminal_confirm　] is not a well-formed tool name."
                 },
                 "py": {
                     "digest": "sha256:24ba49007108ebd7e2989574c9b1a8dd",
                     "declared": true,
                     "allows": false,
                     "admitted": false,
-                    "message": "Human+ tool [terminal_confirm　] is reserved for the human confirmation surface."
+                    "message": "Human+ tool name [terminal_confirm　] is not a well-formed tool name."
                 }
             },
             "agrees": true,
@@ -941,21 +941,21 @@
                     "declared": true,
                     "allows": false,
                     "admitted": false,
-                    "message": "Human+ tool [terminal_confirm​] is reserved for the human confirmation surface."
+                    "message": "Human+ tool name [terminal_confirm​] is not a well-formed tool name."
                 },
                 "ts": {
                     "digest": "sha256:2a4c7a4250dec0b8d4512dc8eade608e",
                     "declared": true,
                     "allows": false,
                     "admitted": false,
-                    "message": "Human+ tool [terminal_confirm​] is reserved for the human confirmation surface."
+                    "message": "Human+ tool name [terminal_confirm​] is not a well-formed tool name."
                 },
                 "py": {
                     "digest": "sha256:2a4c7a4250dec0b8d4512dc8eade608e",
                     "declared": true,
                     "allows": false,
                     "admitted": false,
-                    "message": "Human+ tool [terminal_confirm​] is reserved for the human confirmation surface."
+                    "message": "Human+ tool name [terminal_confirm​] is not a well-formed tool name."
                 }
             },
             "agrees": true,
@@ -981,21 +981,21 @@
                     "declared": true,
                     "allows": false,
                     "admitted": false,
-                    "message": "Human+ tool [terminal_confirm﻿] is reserved for the human confirmation surface."
+                    "message": "Human+ tool name [terminal_confirm﻿] is not a well-formed tool name."
                 },
                 "ts": {
                     "digest": "sha256:970dd334efece0bccbc874085d67f454",
                     "declared": true,
                     "allows": false,
                     "admitted": false,
-                    "message": "Human+ tool [terminal_confirm﻿] is reserved for the human confirmation surface."
+                    "message": "Human+ tool name [terminal_confirm﻿] is not a well-formed tool name."
                 },
                 "py": {
                     "digest": "sha256:970dd334efece0bccbc874085d67f454",
                     "declared": true,
                     "allows": false,
                     "admitted": false,
-                    "message": "Human+ tool [terminal_confirm﻿] is reserved for the human confirmation surface."
+                    "message": "Human+ tool name [terminal_confirm﻿] is not a well-formed tool name."
                 }
             },
             "agrees": true,
@@ -1021,21 +1021,305 @@
                     "declared": true,
                     "allows": false,
                     "admitted": false,
-                    "message": "Human+ tool [ confirm] is reserved for the human confirmation surface."
+                    "message": "Human+ tool name [ confirm] is not a well-formed tool name."
                 },
                 "ts": {
                     "digest": "sha256:4721383abeebc8d55261c8d8545c1351",
                     "declared": true,
                     "allows": false,
                     "admitted": false,
-                    "message": "Human+ tool [ confirm] is reserved for the human confirmation surface."
+                    "message": "Human+ tool name [ confirm] is not a well-formed tool name."
                 },
                 "py": {
                     "digest": "sha256:4721383abeebc8d55261c8d8545c1351",
                     "declared": true,
                     "allows": false,
                     "admitted": false,
-                    "message": "Human+ tool [ confirm] is reserved for the human confirmation surface."
+                    "message": "Human+ tool name [ confirm] is not a well-formed tool name."
+                }
+            },
+            "agrees": true,
+            "disagrees_on": []
+        },
+        {
+            "id": "adm-0026",
+            "title": "a HOMOGLYPH of a reserved verb",
+            "since": "0.1.0",
+            "tool": {
+                "name": "сonfirm",
+                "description": "A tool.",
+                "input_schema_json": "{\"type\":\"object\"}"
+            },
+            "policy": {
+                "mode": "everyTool",
+                "tools": []
+            },
+            "notes": "Cyrillic U+0441 in place of ASCII `c`. It does NOT bypass the reservation -- it genuinely is not `confirm`, so not reserving it is correct -- but a human reading an allowlist cannot tell it from the real one. The hole is in the HUMAN's ability to audit the trust config, which is the other half of the same trust model, and no amount of pattern-matching on the reserved word closes it. An ASCII-only name rule does.",
+            "admission": {
+                "php": {
+                    "digest": "sha256:93f119c7c625110c6031bfb27fb9f96e",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool name [сonfirm] is not a well-formed tool name."
+                },
+                "ts": {
+                    "digest": "sha256:93f119c7c625110c6031bfb27fb9f96e",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool name [сonfirm] is not a well-formed tool name."
+                },
+                "py": {
+                    "digest": "sha256:93f119c7c625110c6031bfb27fb9f96e",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool name [сonfirm] is not a well-formed tool name."
+                }
+            },
+            "agrees": true,
+            "disagrees_on": []
+        },
+        {
+            "id": "adm-0027",
+            "title": "INTERIOR whitespace in a tool name",
+            "since": "0.1.0",
+            "tool": {
+                "name": "terminal_ confirm",
+                "description": "A tool.",
+                "input_schema_json": "{\"type\":\"object\"}"
+            },
+            "policy": {
+                "mode": "everyTool",
+                "tools": []
+            },
+            "notes": "Trailing whitespace was G-36; interior whitespace is the same class one step in, and normalisation cannot reach it without changing what the name IS. Refused by the name rule instead.",
+            "admission": {
+                "php": {
+                    "digest": "sha256:49b5760790e07fa37660007380e92ec5",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool name [terminal_ confirm] is not a well-formed tool name."
+                },
+                "ts": {
+                    "digest": "sha256:49b5760790e07fa37660007380e92ec5",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool name [terminal_ confirm] is not a well-formed tool name."
+                },
+                "py": {
+                    "digest": "sha256:49b5760790e07fa37660007380e92ec5",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool name [terminal_ confirm] is not a well-formed tool name."
+                }
+            },
+            "agrees": true,
+            "disagrees_on": []
+        },
+        {
+            "id": "adm-0028",
+            "title": "an interior CONTROL character",
+            "since": "0.1.0",
+            "tool": {
+                "name": "surface\u0007write",
+                "description": "A tool.",
+                "input_schema_json": "{\"type\":\"object\"}"
+            },
+            "policy": {
+                "mode": "everyTool",
+                "tools": []
+            },
+            "notes": "U+0007 BEL. Invisible in every log, terminal and allowlist a human might review it in -- and the shell tooling used to write this corpus refuses to carry it at all, which is the argument in miniature. A name rule that allows arbitrary bytes leaves the audit surface lying to whoever reads it.",
+            "admission": {
+                "php": {
+                    "digest": "sha256:90ceaf74624a8945d761203b1a665b52",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool name [surface\u0007write] is not a well-formed tool name."
+                },
+                "ts": {
+                    "digest": "sha256:90ceaf74624a8945d761203b1a665b52",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool name [surface\u0007write] is not a well-formed tool name."
+                },
+                "py": {
+                    "digest": "sha256:90ceaf74624a8945d761203b1a665b52",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool name [surface\u0007write] is not a well-formed tool name."
+                }
+            },
+            "agrees": true,
+            "disagrees_on": []
+        },
+        {
+            "id": "adm-0029",
+            "title": "a name that is entirely EMPTY",
+            "since": "0.1.0",
+            "tool": {
+                "name": "",
+                "description": "A tool.",
+                "input_schema_json": "{\"type\":\"object\"}"
+            },
+            "policy": {
+                "mode": "everyTool",
+                "tools": []
+            },
+            "notes": "Refused. Pinned because an empty string is falsy in all three languages and is exactly the value a truthiness check silently lets through -- the same shape as the zero-id row in the harness corpus.",
+            "admission": {
+                "php": {
+                    "digest": "sha256:e2ae3964573f4016fb23e39a7c7e3d03",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool name [] is not a well-formed tool name."
+                },
+                "ts": {
+                    "digest": "sha256:e2ae3964573f4016fb23e39a7c7e3d03",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool name [] is not a well-formed tool name."
+                },
+                "py": {
+                    "digest": "sha256:e2ae3964573f4016fb23e39a7c7e3d03",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool name [] is not a well-formed tool name."
+                }
+            },
+            "agrees": true,
+            "disagrees_on": []
+        },
+        {
+            "id": "adm-0030",
+            "title": "a name longer than the limit",
+            "since": "0.1.0",
+            "tool": {
+                "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "description": "A tool.",
+                "input_schema_json": "{\"type\":\"object\"}"
+            },
+            "policy": {
+                "mode": "everyTool",
+                "tools": []
+            },
+            "notes": "129 characters against a 128 limit. A bound stated in one language and not the others is a divergence waiting to happen, so it is pinned rather than left to each port's judgement.",
+            "admission": {
+                "php": {
+                    "digest": "sha256:d8ea8b3cc5614409fcae39bedb5d723a",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool name [aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa] is not a well-formed tool name."
+                },
+                "ts": {
+                    "digest": "sha256:d8ea8b3cc5614409fcae39bedb5d723a",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool name [aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa] is not a well-formed tool name."
+                },
+                "py": {
+                    "digest": "sha256:d8ea8b3cc5614409fcae39bedb5d723a",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool name [aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa] is not a well-formed tool name."
+                }
+            },
+            "agrees": true,
+            "disagrees_on": []
+        },
+        {
+            "id": "adm-0031",
+            "title": "a NAMESPACED name, which must still work",
+            "since": "0.1.0",
+            "tool": {
+                "name": "vendor.tool",
+                "description": "A tool.",
+                "input_schema_json": "{\"type\":\"object\"}"
+            },
+            "policy": {
+                "mode": "allowing",
+                "tools": [
+                    "vendor.tool"
+                ]
+            },
+            "notes": "The other direction, and the one a name rule can break. Dots, colons and hyphens are how real surfaces namespace their tools, so refusing them would make this rule unusable and get it removed. Allowed, and pinned so it stays allowed.",
+            "admission": {
+                "php": {
+                    "digest": "sha256:a1938fce37f4dd39a4fe9bbd2ccfb081",
+                    "declared": true,
+                    "allows": true,
+                    "admitted": true,
+                    "message": null
+                },
+                "ts": {
+                    "digest": "sha256:a1938fce37f4dd39a4fe9bbd2ccfb081",
+                    "declared": true,
+                    "allows": true,
+                    "admitted": true,
+                    "message": null
+                },
+                "py": {
+                    "digest": "sha256:a1938fce37f4dd39a4fe9bbd2ccfb081",
+                    "declared": true,
+                    "allows": true,
+                    "admitted": true,
+                    "message": null
+                }
+            },
+            "agrees": true,
+            "disagrees_on": []
+        },
+        {
+            "id": "adm-0032",
+            "title": "a hyphenated name, which must still work",
+            "since": "0.1.0",
+            "tool": {
+                "name": "web-search",
+                "description": "A tool.",
+                "input_schema_json": "{\"type\":\"object\"}"
+            },
+            "policy": {
+                "mode": "allowing",
+                "tools": [
+                    "web-search"
+                ]
+            },
+            "notes": "Same reasoning as adm-0031. `web-search` and `fetch_url` are names this ecosystem actually uses; a rule that refused them would be refused itself.",
+            "admission": {
+                "php": {
+                    "digest": "sha256:b6f9504f79e44e68f9215b5eac498fa6",
+                    "declared": true,
+                    "allows": true,
+                    "admitted": true,
+                    "message": null
+                },
+                "ts": {
+                    "digest": "sha256:b6f9504f79e44e68f9215b5eac498fa6",
+                    "declared": true,
+                    "allows": true,
+                    "admitted": true,
+                    "message": null
+                },
+                "py": {
+                    "digest": "sha256:b6f9504f79e44e68f9215b5eac498fa6",
+                    "declared": true,
+                    "allows": true,
+                    "admitted": true,
+                    "message": null
                 }
             },
             "agrees": true,

@@ -89,7 +89,7 @@ function admitFromCorpus(array $case): array
 }
 
 it('is the whole suite, not a subset someone trimmed to green', function (): void {
-    expect(toolAdmissionCorpus())->toHaveCount(25);
+    expect(toolAdmissionCorpus())->toHaveCount(32);
 });
 
 it('still decides each case the way the corpus recorded', function (array $case): void {
@@ -147,6 +147,43 @@ it('still admits the names that merely LOOK like a reserved verb', function (): 
     // Normalising only ever reserves MORE names, so these are what proves it did
     // not over-reach: `confirmation_status` and `preconfirm` stay callable.
     foreach (['adm-0009', 'adm-0010'] as $id) {
+        $case = collect(toolAdmissionCorpus())->firstWhere('id', $id);
+
+        expect(admitFromCorpus($case)['admitted'])->toBeTrue($id)
+            ->and($case['admission']['ts']['admitted'])->toBeTrue($id)
+            ->and($case['admission']['py']['admitted'])->toBeTrue($id);
+    }
+});
+
+it('REFUSES a name that is not well formed, in all three languages', function (): void {
+    // The name rule, and the reason it exists beyond tidiness.
+    //
+    // adm-0026 is the one worth reading. A Cyrillic `с` in `сonfirm` does NOT
+    // bypass the reservation — it genuinely is not `confirm`, so not reserving
+    // it is correct — but a human reading an allowlist cannot tell it from the
+    // real one. The hole is in the HUMAN's ability to audit the trust config,
+    // which is the other half of the same trust model, and no amount of
+    // pattern-matching on the reserved word closes it. An ASCII-only name does.
+    //
+    // adm-0028 carries a BEL byte: invisible in every log and allowlist someone
+    // might review it in. The shell tooling used to build this corpus refuses
+    // to carry that character at all, which is the argument in miniature.
+    foreach (['adm-0026', 'adm-0027', 'adm-0028', 'adm-0029', 'adm-0030'] as $id) {
+        $case = collect(toolAdmissionCorpus())->firstWhere('id', $id);
+
+        expect(admitFromCorpus($case)['allows'])->toBeFalse($id)
+            ->and(admitFromCorpus($case)['admitted'])->toBeFalse($id)
+            ->and($case['admission']['ts']['allows'])->toBeFalse($id)
+            ->and($case['admission']['py']['allows'])->toBeFalse($id);
+    }
+});
+
+it('still ADMITS the namespaced and hyphenated names real surfaces use', function (): void {
+    // The direction a name rule breaks things, and the reason this one is not
+    // stricter. Dots, colons and hyphens are how surfaces namespace tools; a
+    // rule that refused `vendor.tool` or `web-search` would be unusable and
+    // would get removed, taking the homoglyph guard with it.
+    foreach (['adm-0031', 'adm-0032'] as $id) {
         $case = collect(toolAdmissionCorpus())->firstWhere('id', $id);
 
         expect(admitFromCorpus($case)['admitted'])->toBeTrue($id)
