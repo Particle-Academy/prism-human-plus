@@ -30,8 +30,44 @@ The first vertical slice ships participant/surface value objects, lifecycle
 states, explicit trust and pinning, bounded result framing, the isolated MCP
 `2025-06-18` initialize state machine, activity notifications, and a transport
 contract. `SsePostRelayTransport` implements Fancy's client-scoped POST + SSE
-wire protocol for bounded exchanges. High-concurrency applications should bind
-an async gateway/long-poll transport rather than parking ordinary queue workers.
+wire protocol for bounded exchanges.
+
+### What that costs a host, stated properly
+
+This paragraph used to say "high-concurrency applications should bind an async
+gateway/long-poll transport rather than parking ordinary queue workers", and a
+consumer whose chat turns *are* ordinary queue workers could not tell from it
+whether they were inside or outside what the transport is for. They stopped and
+asked. The adjective was the problem, so here is the mechanism instead.
+
+**`exchange()` parks ONE WORKER PER IN-FLIGHT EXCHANGE, for at most
+`timeoutSeconds`.** It POSTs the frame to `/inbox`, opens `GET /events`, and
+blocks until the correlated id arrives or the stream ends. Both legs are capped
+by `timeoutSeconds` — a constructor argument, default 30. The stream is opened
+per exchange and closed when the response arrives; nothing is held between
+calls. `notify()` is POST-only and does not wait, so `announce()` costs nothing
+here.
+
+So there is no concurrency limit inside this package. The failure mode is worker
+starvation in the *host*: turns queueing behind each other because concurrent
+attachments exceeded the workers available to them. That is a capacity question,
+and it is answerable with arithmetic rather than an adjective.
+
+For a queue-worker host: give canvas turns their **own queue**, size its workers
+to your expected concurrent attachments, and **lower** `timeoutSeconds` rather
+than raising it — a dead surface should fail inside the turn instead of holding
+a worker for thirty seconds a call.
+
+**Attach per turn.** `attach()` performs no network at all; it mints ids and
+writes the store row. The wire cost starts at first use — `initialize`, a
+non-blocking `notifications/initialized`, then `tools/list` — and
+`LegacyMcpClient` caches initialisation **per process**, so an attachment held
+across a whole conversation re-initialises on whichever worker takes the next
+turn anyway. Holding one open buys less than it appears to. Attach, call, then
+`detach()`.
+
+Real numbers from a production-shaped host are being gathered with a consumer
+and will replace the estimates above when they exist.
 
 The transport requires a trusted egress proxy by default and independently checks
 the declared host, port, URL shape, and resolved addresses. The explicit
