@@ -8,6 +8,36 @@ state, stable handles, MCP tools, presence, undo, and staged-write UI. This
 package lets a PHP agent join that surface as a named participant through an
 explicit invitation and relay transport. It keeps Browser entirely separate.
 
+## Reach for this when the agent and the surface are different systems
+
+**Do not pay for a relay when both ends are yours.**
+
+This package exists to cross a real trust boundary: an agent in one system
+driving a surface owned by another — Claude Code on a laptop moving something in
+somebody's browser. Everything expensive about it is the price of that boundary.
+The relay endpoint, the per-session token, the token in the query string that
+makes log redaction load-bearing across proxies and referrers and error pages —
+those are correct costs when there is a boundary, and pure loss when there is
+not.
+
+So if your server already owns the surface, already wrote the schema it renders,
+and already holds an authenticated socket to that browser, adopting this makes
+your security posture **worse**: you would be adding a network hop and a bearer
+credential in order to change state you already control. Broadcast over the
+socket you already run.
+
+The signal that you have crossed into this package's case is a **second
+writer** — a human dragging nodes on the same graph the agent is editing.
+Then you need the surface's real state rather than your own assumption of it,
+presence a person can see, and tool definitions that come from the surface's own
+`tools/list` rather than from your side's idea of them.
+
+This framing came from the first team to evaluate the package. They read it
+properly, concluded correctly that their v1 had no boundary to cross, and told
+us so — which is more useful than an adoption would have been, and is why it is
+now the first thing on this page instead of something the next reader has to
+work out for themselves.
+
 ## Invariants
 
 - Trust is declared before `initialize` or `tools/list` reaches the surface.
@@ -66,8 +96,13 @@ across a whole conversation re-initialises on whichever worker takes the next
 turn anyway. Holding one open buys less than it appears to. Attach, call, then
 `detach()`.
 
-Real numbers from a production-shaped host are being gathered with a consumer
-and will replace the estimates above when they exist.
+**None of the above is measured.** It is read off the transport, which is why it
+is stated as a mechanism rather than as numbers: one worker, one exchange,
+`timeoutSeconds`. A measurement pass against a production-shaped queue-worker
+host was offered and then correctly withdrawn — that team concluded they had no
+trust boundary to cross and are not running this transport, so there is nothing
+to measure yet. The arithmetic here does not depend on their numbers; a claim
+about how it *performs* would, and none is made.
 
 The transport requires a trusted egress proxy by default and independently checks
 the declared host, port, URL shape, and resolved addresses. The explicit
