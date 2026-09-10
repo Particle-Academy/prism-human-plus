@@ -10,7 +10,6 @@ use Prism\HumanPlus\Data\SurfaceAttachment;
 use Prism\HumanPlus\Exceptions\AttachmentUnauthorized;
 use Prism\HumanPlus\Exceptions\HumanPlusException;
 use Prism\HumanPlus\Exceptions\SurfaceUnavailable;
-use Psr\Http\Message\ResponseInterface;
 
 /**
  * Fancy's client-scoped SSE + POST relay transport.
@@ -19,45 +18,58 @@ use Psr\Http\Message\ResponseInterface;
  * PHP transport POST before opening its bounded receive stream. This ordering
  * works with synchronous queue workers and avoids parking one HTTP handler
  * while another request is still needed to produce the first event.
+ *
+ * **This is the transport to reach for first.** One round trip, no polling
+ * interval, and the response arrives the instant the broker has it. Reach for
+ * {@see LongPollRelayTransport} only when the streaming leg cannot survive the
+ * trip - a runtime with no streaming client, a proxy that buffers the response,
+ * a gateway that kills a request producing no bytes. That is a different
+ * problem from throughput, and neither transport solves throughput.
+ *
+ * Every check between the invitation and the wire lives in
+ * {@see RelayEndpoint}, which both transports compose. This class owns exactly
+ * one thing the other does not: how it waits.
  */
 final readonly class SsePostRelayTransport implements RelayTransport
 {
+    private RelayEndpoint $endpoint;
+
     /**
      * @param  list<string>  $allowedRelayHosts
      * @param  list<int>  $allowedRelayPorts
      */
     public function __construct(
         private ClientInterface $http,
-        private array $allowedRelayHosts,
+        array $allowedRelayHosts,
         private int $timeoutSeconds = 30,
         private int $maxFrameBytes = 262144,
-        private array $allowedRelayPorts = [443],
-        private ?string $egressProxy = null,
-        private bool $allowUnverifiedEgress = false,
-        private string $authMode = 'query',
+        array $allowedRelayPorts = [443],
+        ?string $egressProxy = null,
+        bool $allowUnverifiedEgress = false,
+        string $authMode = 'query',
         private bool $useNativeCurl = false,
-    ) {}
+    ) {
+        $this->endpoint = new RelayEndpoint(
+            $http,
+            $allowedRelayHosts,
+            $timeoutSeconds,
+            $allowedRelayPorts,
+            $egressProxy,
+            $allowUnverifiedEgress,
+            $authMode,
+        );
+    }
 
     public function exchange(SurfaceAttachment $attachment, array $frame): array
     {
-        $base = $this->base($attachment);
         if ($this->useNativeCurl) {
-            return $this->exchangeNative($attachment, $frame, $base);
+            return $this->exchangeNative($attachment, $frame, $this->endpoint->base($attachment));
         }
-        $query = $this->query($attachment, ['direction' => 'outbound']);
-        $post = $this->http->request('POST', $base.'/inbox?'.$this->query($attachment), [
-            'http_errors' => false, 'timeout' => $this->timeoutSeconds,
-            'headers' => $this->headers($attachment, ['Content-Type' => 'application/json']),
-            'body' => json_encode($frame, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
-            ...$this->networkOptions(),
+        $this->endpoint->post($attachment, 'inbox', $frame);
+        $streamResponse = $this->endpoint->get($attachment, 'events', ['direction' => 'outbound'], [
+            'stream' => true,
+            'headers' => $this->endpoint->headers($attachment, ['Accept' => 'text/event-stream', 'Cache-Control' => 'no-cache']),
         ]);
-        $this->assertLive($post);
-        $streamResponse = $this->http->request('GET', $base.'/events?'.$query, [
-            'stream' => true, 'timeout' => $this->timeoutSeconds,
-            'headers' => $this->headers($attachment, ['Accept' => 'text/event-stream', 'Cache-Control' => 'no-cache']),
-            ...$this->networkOptions(),
-        ]);
-        $this->assertLive($streamResponse);
 
         $expectedId = $frame['id'] ?? null;
         $buffer = '';
@@ -96,11 +108,12 @@ final readonly class SsePostRelayTransport implements RelayTransport
         $decoded = null;
         $buffer = '';
         $headersReady = false;
-        $get = curl_init($base.'/events?'.$this->query($attachment, ['direction' => 'outbound']));
-        $post = curl_init($base.'/inbox?'.$this->query($attachment));
+        $get = curl_init($base.'/events?'.$this->endpoint->query($attachment, ['direction' => 'outbound']));
+        $post = curl_init($base.'/inbox?'.$this->endpoint->query($attachment));
         $common = [CURLOPT_TIMEOUT => $this->timeoutSeconds, CURLOPT_HTTPHEADER => $this->curlHeaders($attachment)];
-        if ($this->egressProxy !== null) {
-            $common[CURLOPT_PROXY] = $this->egressProxy;
+        $proxy = $this->endpoint->proxy();
+        if ($proxy !== null) {
+            $common[CURLOPT_PROXY] = $proxy;
         }
         curl_setopt_array($get, $common + [
             CURLOPT_HEADERFUNCTION => function ($handle, string $line) use (&$headersReady): int {
@@ -136,7 +149,7 @@ final readonly class SsePostRelayTransport implements RelayTransport
         curl_setopt_array($post, $common + [
             CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER => [...$this->curlHeaders($attachment), 'Content-Type: application/json'],
-            CURLOPT_POSTFIELDS => json_encode($frame, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+            CURLOPT_POSTFIELDS => RelayEndpoint::encode($frame),
         ]);
         $multi = curl_multi_init();
         curl_multi_add_handle($multi, $get);
@@ -185,137 +198,17 @@ final readonly class SsePostRelayTransport implements RelayTransport
     /** @return list<string> */
     private function curlHeaders(SurfaceAttachment $attachment): array
     {
-        $headers = ['Accept: text/event-stream', 'Cache-Control: no-cache'];
-        if ($this->authMode === 'bearer') {
-            $headers[] = 'Authorization: Bearer '.$attachment->invitation->token;
-        }
-
-        return $headers;
+        return ['Accept: text/event-stream', 'Cache-Control: no-cache', ...$this->endpoint->curlAuthHeaders($attachment)];
     }
 
     public function notify(SurfaceAttachment $attachment, array $frame): void
     {
-        $response = $this->http->request('POST', $this->base($attachment).'/inbox?'.$this->query($attachment), [
-            'http_errors' => false, 'timeout' => $this->timeoutSeconds,
-            'headers' => $this->headers($attachment, ['Content-Type' => 'application/json']),
-            'body' => json_encode($frame, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
-            ...$this->networkOptions(),
-        ]);
-        $this->assertLive($response);
+        $this->endpoint->post($attachment, 'inbox', $frame);
     }
 
     public function detach(SurfaceAttachment $attachment): void
     {
-        $response = $this->http->request('POST', $this->base($attachment).'/unregister?'.$this->query($attachment), [
-            'http_errors' => false, 'timeout' => $this->timeoutSeconds,
-            'headers' => $this->headers($attachment),
-            ...$this->networkOptions(),
-        ]);
-        $this->assertLive($response, detach: true);
-    }
-
-    private function base(SurfaceAttachment $attachment): string
-    {
-        $url = rtrim($attachment->invitation->relayBaseUrl, '/');
-        if ($this->egressProxy === null && ! $this->allowUnverifiedEgress) {
-            throw new AttachmentUnauthorized('Human+ relay transport requires a trusted egress proxy; explicitly opt into unverified egress only for isolated local dogfooding.');
-        }
-        $scheme = parse_url($url, PHP_URL_SCHEME);
-        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
-        $insecureLoopback = $this->allowUnverifiedEgress && $scheme === 'http' && in_array($host, ['127.0.0.1', '::1', 'localhost'], true);
-        if (($scheme !== 'https' && ! $insecureLoopback)
-            || parse_url($url, PHP_URL_USER) !== null
-            || parse_url($url, PHP_URL_PASS) !== null
-            || parse_url($url, PHP_URL_QUERY) !== null
-            || parse_url($url, PHP_URL_FRAGMENT) !== null) {
-            throw new AttachmentUnauthorized('Human+ relay URL must be credential-free HTTPS without query or fragment components.');
-        }
-        if (! in_array($host, array_map(strtolower(...), $this->allowedRelayHosts), true)) {
-            throw new AttachmentUnauthorized(sprintf('Relay host [%s] is not declared by local Human+ policy.', $host));
-        }
-        $port = parse_url($url, PHP_URL_PORT) ?? 443;
-        if (! is_int($port) || ! in_array($port, $this->allowedRelayPorts, true)) {
-            throw new AttachmentUnauthorized(sprintf('Relay port [%s] is not declared by local Human+ policy.', (string) $port));
-        }
-        if (! $insecureLoopback) {
-            $this->assertPublicHost($host);
-        }
-
-        return $url.'/'.rawurlencode($attachment->invitation->sessionId);
-    }
-
-    /** @param array<string, string> $extra */
-    private function query(SurfaceAttachment $attachment, array $extra = []): string
-    {
-        $auth = $this->authMode === 'query' ? ['token' => $attachment->invitation->token] : [];
-
-        return http_build_query([...$auth, 'client' => $attachment->clientId, ...$extra], '', '&', PHP_QUERY_RFC3986);
-    }
-
-    /**
-     * @param  array<string, string>  $extra
-     * @return array<string, string>
-     */
-    private function headers(SurfaceAttachment $attachment, array $extra = []): array
-    {
-        if (! in_array($this->authMode, ['query', 'bearer'], true)) {
-            throw new AttachmentUnauthorized('Human+ relay authentication mode must be query or bearer.');
-        }
-
-        return $this->authMode === 'bearer'
-            ? ['Authorization' => 'Bearer '.$attachment->invitation->token, ...$extra]
-            : $extra;
-    }
-
-    /** @return array{}|array{proxy: string} */
-    private function networkOptions(): array
-    {
-        return $this->egressProxy === null ? [] : ['proxy' => $this->egressProxy];
-    }
-
-    private function assertPublicHost(string $host): void
-    {
-        if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
-            if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
-                throw new AttachmentUnauthorized('Human+ relay resolved to a private or reserved address.');
-            }
-
-            return;
-        }
-
-        if ($this->allowUnverifiedEgress) {
-            return;
-        }
-
-        $records = dns_get_record($host, DNS_A | DNS_AAAA);
-        if ($records === false || $records === []) {
-            throw new AttachmentUnauthorized('Human+ relay host did not resolve to a public address.');
-        }
-        foreach ($records as $record) {
-            $address = $record['ip'] ?? $record['ipv6'] ?? null;
-            if (! is_string($address) || filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
-                throw new AttachmentUnauthorized('Human+ relay resolved to a private or reserved address.');
-            }
-        }
-    }
-
-    private function assertLive(ResponseInterface $response, bool $detach = false): void
-    {
-        $status = $response->getStatusCode();
-        if ($status >= 200 && $status < 300) {
-            return;
-        }
-        $body = (string) $response->getBody();
-        if ($status === 410 || str_contains($body, 'session_gone')) {
-            if ($detach) {
-                return;
-            }
-            throw new SurfaceUnavailable('The Fancy surface is gone; this attachment cannot resume.');
-        }
-        if ($status === 401) {
-            throw new AttachmentUnauthorized('The Fancy surface attachment is unauthorized.');
-        }
-        throw new HumanPlusException(sprintf('Fancy relay failed with HTTP %d.', $status));
+        $this->endpoint->post($attachment, 'unregister', detach: true);
     }
 
     private function eventData(string $event): ?string

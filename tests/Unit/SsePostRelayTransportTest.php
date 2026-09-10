@@ -14,15 +14,6 @@ use Prism\HumanPlus\Exceptions\AttachmentUnauthorized;
 use Prism\HumanPlus\Exceptions\SurfaceUnavailable;
 use Prism\HumanPlus\Transport\SsePostRelayTransport;
 
-function relayAttachment(): SurfaceAttachment
-{
-    return new SurfaceAttachment(
-        'surface_1', 'session:one',
-        new SurfaceInvitation('https://relay.example.com', 'demo_001', str_repeat('a', 32), 'sheet:one', 'Demo'),
-        new Participant('agent:one', 'One', '#000000'), 'php_worker_1',
-    );
-}
-
 function relayTransport(Response ...$responses): SsePostRelayTransport
 {
     $mock = new MockHandler($responses);
