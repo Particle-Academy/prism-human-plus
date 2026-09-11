@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Prism\HumanPlus\Data;
 
 use Prism\HumanPlus\Enums\AttachmentState;
-use Prism\HumanPlus\Exceptions\ConflictDetectionUnavailable;
+use Prism\HumanPlus\Enums\ConflictDetection;
 
 final readonly class SurfaceAttachment
 {
@@ -28,21 +28,24 @@ final readonly class SurfaceAttachment
          */
         public ?SurfaceRevision $revision = null,
         /**
-         * Has this surface EVER minted a revision? Null until it has answered.
+         * How much protection this surface has been OBSERVED to have.
          *
-         * Separate from `$revision` because they answer different questions, and
-         * the difference is the whole of {@see ConflictDetectionUnavailable}:
+         * Separate from `$revision` because they answer different questions:
          * `$revision === null` can mean "not yet read" OR "this surface does not
          * do revisions", and only the second is a reason to refuse a write.
+         *
+         * Was a `?bool` called `$revisionsSupported`, and the boolean was wrong
+         * in a way that mattered — it recorded MINTING and was read as
+         * PROTECTION. {@see ConflictDetection} has the finding.
          */
-        public ?bool $revisionsSupported = null,
+        public ConflictDetection $conflictDetection = ConflictDetection::NotObserved,
     ) {}
 
     public function transition(AttachmentState $state): self
     {
         return new self(
             $this->id, $this->owner, $this->invitation, $this->participant, $this->clientId,
-            $this->generation + 1, $state, $this->revision, $this->revisionsSupported,
+            $this->generation + 1, $state, $this->revision, $this->conflictDetection,
         );
     }
 
@@ -58,30 +61,53 @@ final readonly class SurfaceAttachment
      */
     public function withRevision(?SurfaceRevision $revision): self
     {
+        // Seeing a revision proves minting, so it upgrades OUT of Unavailable —
+        // a surface that answered once without one and mints later plainly does
+        // mint, and the old boolean made that verdict permanent. Enforced is
+        // never downgraded: it was proven by a refusal that happened.
+        $detection = $revision instanceof SurfaceRevision && $this->conflictDetection !== ConflictDetection::Enforced
+            ? ConflictDetection::Minted
+            : $this->conflictDetection;
+
         return new self(
             $this->id, $this->owner, $this->invitation, $this->participant, $this->clientId,
-            $this->generation, $this->state, $revision, $revision instanceof SurfaceRevision ? true : $this->revisionsSupported,
+            $this->generation, $this->state, $revision, $detection,
+        );
+    }
+
+    /**
+     * Record that the surface actually REFUSED a stale pin.
+     *
+     * The only positive proof of enforcement available, and it is permanent:
+     * a refusal that happened cannot un-happen. Nothing else can establish this
+     * — a surface with one writer never rejects anything and is indistinguishable
+     * from a surface that cannot reject.
+     */
+    public function observingEnforcement(): self
+    {
+        return new self(
+            $this->id, $this->owner, $this->invitation, $this->participant, $this->clientId,
+            $this->generation, $this->state, null, ConflictDetection::Enforced,
         );
     }
 
     /**
      * Record that the surface answered and minted nothing.
      *
-     * Only ever moves null → false. A surface that supplied a revision once and
-     * then stopped is a surface that supports them and had nothing new to say,
-     * which is not the same as one that has never had the capability — and
-     * treating it as such would refuse writes on a surface that is protecting
-     * them perfectly well.
+     * Only ever moves NotObserved → Unavailable. A surface that supplied a
+     * revision once and then had nothing new to say still mints them, and
+     * downgrading it would refuse writes on a surface protecting them perfectly
+     * well.
      */
     public function observingNoRevision(): self
     {
-        if ($this->revisionsSupported !== null) {
+        if ($this->conflictDetection !== ConflictDetection::NotObserved) {
             return $this;
         }
 
         return new self(
             $this->id, $this->owner, $this->invitation, $this->participant, $this->clientId,
-            $this->generation, $this->state, $this->revision, false,
+            $this->generation, $this->state, $this->revision, ConflictDetection::Unavailable,
         );
     }
 
@@ -99,7 +125,7 @@ final readonly class SurfaceAttachment
     {
         return new self(
             $this->id, $this->owner, $this->invitation, $this->participant, $this->clientId,
-            $this->generation, $this->state, null, $this->revisionsSupported,
+            $this->generation, $this->state, null, $this->conflictDetection,
         );
     }
 }

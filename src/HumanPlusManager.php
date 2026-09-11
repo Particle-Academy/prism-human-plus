@@ -13,6 +13,7 @@ use Prism\HumanPlus\Data\SurfaceInvitation;
 use Prism\HumanPlus\Data\SurfaceRevision;
 use Prism\HumanPlus\Data\ToolDefinition;
 use Prism\HumanPlus\Enums\AttachmentState;
+use Prism\HumanPlus\Enums\ConflictDetection;
 use Prism\HumanPlus\Exceptions\AttachmentUnauthorized;
 use Prism\HumanPlus\Exceptions\ConflictDetectionUnavailable;
 use Prism\HumanPlus\Exceptions\HumanPlusException;
@@ -42,6 +43,13 @@ final class HumanPlusManager
          * ON is for a shared canvas, where a lost update is silent data loss —
          * see {@see ConflictDetectionUnavailable} for why the absence has to be
          * made loud rather than left to look like protection.
+         *
+         * **This requires minting, which is not the same as protection.** A
+         * surface that mints a revision and ignores the pin satisfies this flag
+         * and loses every update; the first integrator is exactly that surface
+         * today. There is deliberately no stricter mode — see
+         * {@see ConflictDetection} for why demanding proof of enforcement would
+         * refuse every write on a healthy single-writer surface.
          */
         private readonly bool $requireRevision = false,
     ) {
@@ -49,17 +57,24 @@ final class HumanPlusManager
     }
 
     /**
-     * Can a lost update be DETECTED on this surface? Null until it has answered.
+     * How much lost-update protection this surface has been OBSERVED to have.
      *
      * A check rather than a claim, and callable at attach time so a host can
-     * assert it once instead of finding out mid-turn. `false` means the surface
-     * has answered at least one call and never minted a revision, so every write
-     * this package makes is unpinned and a concurrent human edit will be
-     * overwritten in silence.
+     * assert it once instead of finding out mid-turn. Read
+     * {@see ConflictDetection} before acting on it: the state that matters most
+     * is {@see ConflictDetection::Minted}, which means this package is pinning
+     * every call and **cannot see whether the surface enforces the pin**.
+     *
+     * That distinction is not hypothetical. The first integrator mints a
+     * revision on every write result and reads an incoming pin nowhere — no
+     * `_meta`, no rejection path, no 409 — so a pinned call is applied exactly
+     * as an unpinned one. An earlier version of this method returned `true` for
+     * that surface and its documentation said a lost update would be caught.
+     * It would not have been. The states now say only what was seen.
      */
-    public function conflictDetection(string|object $owner, string $id): ?bool
+    public function conflictDetection(string|object $owner, string $id): ConflictDetection
     {
-        return $this->store->lock($id, fn (): ?bool => $this->required($owner, $id)->revisionsSupported);
+        return $this->store->lock($id, fn (): ConflictDetection => $this->required($owner, $id)->conflictDetection);
     }
 
     public function attach(string|object $owner, SurfaceInvitation $invitation, Participant $participant): SurfaceAttachment
@@ -101,7 +116,7 @@ final class HumanPlusManager
             // The first call is always allowed: there is no way to know what a
             // surface supplies before it has answered once, and refusing it
             // would refuse the very read that finds out.
-            if ($this->requireRevision && $attachment->revisionsSupported === false) {
+            if ($this->requireRevision && $attachment->conflictDetection->isUnprotected()) {
                 throw ConflictDetectionUnavailable::forSurface($attachment->invitation->surfaceId, $tool);
             }
 
@@ -126,7 +141,13 @@ final class HumanPlusManager
                 // The attachment is NOT transitioned: a conflict is a normal
                 // outcome of two writers, not a lifecycle failure, and marking
                 // the surface unavailable would end a session that is healthy.
-                $this->store->put($attachment->withoutRevision(), $attachment->generation);
+                // A refusal is the ONLY positive proof that this surface
+                // enforces a pin, so it is recorded permanently. Nothing else
+                // can establish it: a surface with one writer never rejects
+                // anything and is indistinguishable from one that cannot.
+                // `observingEnforcement()` also clears the marker, which is the
+                // recovery path described above.
+                $this->store->put($attachment->observingEnforcement(), $attachment->generation);
 
                 throw SurfaceChangedUnderYou::while($tool, $pinned);
             }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Prism\HumanPlus\Exceptions;
 
 use Prism\HumanPlus\Contracts\HasErrorCode;
+use Prism\HumanPlus\Enums\ConflictDetection;
 use Prism\HumanPlus\HumanPlusManager;
 
 /**
@@ -42,6 +43,16 @@ use Prism\HumanPlus\HumanPlusManager;
  * {@see HumanPlusManager::conflictDetection()} answers the same
  * question without raising, so a host can assert it at attach time instead of
  * discovering it mid-turn.
+ *
+ * ## This is the DEFINITE negative, and it is the only one
+ *
+ * Reaching here means the surface mints nothing, which is knowable. The state
+ * next door — mints a revision, enforcement unknown — cannot raise, because it
+ * cannot be distinguished from a surface that enforces perfectly and has simply
+ * never had a conflict. The first integrator is in that second state: they mint
+ * on every write and read an incoming pin nowhere. No exception can catch that
+ * from here, which is why {@see ConflictDetection}
+ * was changed to stop claiming otherwise.
  */
 final class ConflictDetectionUnavailable extends HumanPlusException implements HasErrorCode
 {

@@ -249,7 +249,7 @@ change here:
 
 ```json
 {"_meta": {"revision": "r42"}}      preferred — _meta is where MCP puts this
-{"revision": "r42"}
+{"revision": "r42"}                 a real surface's shape; do not narrow this away
 {"surfaceRevision": "r42"}
 {"etag": "r42"}
 {"version": 42}
@@ -267,34 +267,65 @@ identifier, not a payload.
 JSON-RPC has no precondition code of its own and a surface protecting its state
 correctly should not lose updates through this client over a spelling.
 
-### If the surface does none of that, the package says so
+### What this package can see, and what it cannot
 
-This is the part worth reading twice. **Conflict detection depends entirely on
-the surface supplying a revision.** If it never does, the package carries
-nothing, pins nothing and detects nothing — while looking exactly as configured
-as one that is working.
-
-That is the failure this ecosystem keeps finding: a guard that reports success
-because it was never asked a question it could answer. So the absence is made
-visible two ways:
+Read this before relying on any of it.
 
 ```php
-$humanPlus->conflictDetection($owner, $id);
-// null  — the surface has not answered yet
-// true  — it mints revisions; a lost update will be caught
-// false — it has answered and never minted one; writes are UNPINNED
+$humanPlus->conflictDetection($owner, $id);   // a ConflictDetection enum
 ```
+
+| state | what it means |
+|---|---|
+| `NotObserved` | The surface has not answered a call. Nothing is known. |
+| `Unavailable` | It answered and minted nothing. Writes are unpinned; a concurrent edit **will** be lost silently. The one definite negative. |
+| `Minted` | It mints revisions, so every call is pinned. **Whether it enforces the pin is not observable from here.** Half a green light. |
+| `Enforced` | It has actually refused a stale pin. Enforcement is proven, because it happened. |
+
+**`Minted` is not protection, and this used to claim it was.** The method
+returned a `?bool` whose `true` was documented as "a lost update will be
+caught". The first integrator found the hole by reading their own surface rather
+than trusting that sentence: they mint a revision on every write result and
+**read an incoming pin nowhere** — no `_meta`, no `If-Match`, no rejection path,
+no 409. A pinned call is accepted and applied exactly as an unpinned one. They
+satisfied the minting half, the detector said `true`, and every update would
+still have been lost.
+
+That is this package's own failure mode one level up — a check reporting success
+because it was asked the question it could answer instead of the one that
+mattered. The states now say only what was seen.
+
+**There is deliberately no "require enforcement" mode.** A surface with one
+writer legitimately never rejects anything, and is indistinguishable from a
+surface that cannot reject, so a flag demanding proof would refuse every write
+on a healthy surface until a conflict happened to occur. `Enforced` is evidence
+when it arrives, never a precondition.
 
 ```php
 new HumanPlusManager($transport, $store, $trust, $guard, requireRevision: true);
 ```
 
-With `requireRevision: true`, a surface that has answered and never minted a
-revision has its next call **refused** with `ConflictDetectionUnavailable`. The
-first call is always allowed — there is no way to know what a surface supplies
-before it has answered once, and refusing it would refuse the read that finds
-out. Off by default, because a single-writer surface is a real and common case
-and refusing it would be this package inventing a requirement.
+`requireRevision: true` refuses a call to a surface in `Unavailable` with
+`ConflictDetectionUnavailable`. The first call is always allowed — there is no
+way to know what a surface supplies before it has answered, and refusing it
+would refuse the read that finds out. Off by default, because a single-writer
+surface is real and refusing it would be inventing a requirement. **It requires
+minting, not protection**: the surface above satisfies it and loses every
+update.
+
+### A coarse revision manufactures refusals that conflict with nothing
+
+Worth knowing before a refusal rate reads as a bug here. The first integrator's
+counter is monotonic **per surface**, not per screen — deliberately, because the
+question a turn asks is "did anything change here", and a per-row counter makes
+that a scan rather than a comparison.
+
+So a human editing screen A bumps the same counter an agent's pending write to
+screen B is pinned against, and `SurfaceChangedUnderYou` is **true by the marker
+and wrong by intent**. That is a property of the marker's granularity, not of
+this package: the fix is a finer revision, or one that encodes which rows moved,
+and both belong to the surface. Nothing here can tell the two apart, because the
+marker is opaque by design.
 
 ### Still not claimed
 

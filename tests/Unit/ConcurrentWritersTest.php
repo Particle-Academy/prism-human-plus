@@ -7,6 +7,7 @@ use Prism\HumanPlus\Data\Participant;
 use Prism\HumanPlus\Data\SurfaceAttachment;
 use Prism\HumanPlus\Data\SurfaceInvitation;
 use Prism\HumanPlus\Data\SurfaceRevision;
+use Prism\HumanPlus\Enums\ConflictDetection;
 use Prism\HumanPlus\Exceptions\ConflictDetectionUnavailable;
 use Prism\HumanPlus\Exceptions\SurfaceChangedUnderYou;
 use Prism\HumanPlus\HumanPlusManager;
@@ -226,29 +227,121 @@ it('does not re-run the MCP handshake for every observed revision', function ():
     expect($initialises)->toBe(1);
 });
 
-it('reports that conflicts CANNOT be detected on a surface that mints nothing', function (): void {
-    // The property the whole feature rests on, and the one that would otherwise
-    // be invisible: everything looks configured while nothing is protected.
+it('knows nothing before the surface has answered', function (): void {
     $surface = new ScriptedSurface([textResult('graph')]);
     [$manager, $id] = surfaceManager($surface);
 
-    // Nothing known before the surface has answered.
-    expect($manager->conflictDetection('owner:1', $id))->toBeNull();
+    expect($manager->conflictDetection('owner:1', $id))->toBe(ConflictDetection::NotObserved);
+});
+
+it('reports a surface that mints NOTHING as unprotected', function (): void {
+    // The one definite negative. Everything looks configured while nothing is
+    // protected, so this state has to be reachable and nameable.
+    $surface = new ScriptedSurface([textResult('graph')]);
+    [$manager, $id] = surfaceManager($surface);
 
     $manager->call('owner:1', $id, 'read_graph');
 
-    expect($manager->conflictDetection('owner:1', $id))->toBeFalse();
+    expect($manager->conflictDetection('owner:1', $id))->toBe(ConflictDetection::Unavailable)
+        ->and($manager->conflictDetection('owner:1', $id)->isUnprotected())->toBeTrue();
 });
 
-it('reports that they CAN be, once the surface has minted one', function (): void {
-    // The positive control for the test above. Without it, a broken detector
-    // that always answered false would pass.
+it('reports MINTED, not protected, for a surface that only mints', function (): void {
+    // THE FINDING. Reported by the first integrator, who read their own surface
+    // instead of trusting the contract: they mint a revision on every write
+    // result and read an incoming pin NOWHERE — no _meta, no rejection path, no
+    // 409 — so a pinned call is applied exactly as an unpinned one.
+    //
+    // The previous version of this returned `true` and its documentation said a
+    // lost update would be caught. It would not have been. `Minted` is half a
+    // green light and says so.
     $surface = new ScriptedSurface([textResult('graph', 'r1')]);
     [$manager, $id] = surfaceManager($surface);
 
     $manager->call('owner:1', $id, 'read_graph');
 
-    expect($manager->conflictDetection('owner:1', $id))->toBeTrue();
+    $detection = $manager->conflictDetection('owner:1', $id);
+
+    expect($detection)->toBe(ConflictDetection::Minted)
+        ->and($detection->isProven())->toBeFalse()
+        ->and($detection->isUnprotected())->toBeFalse()
+        ->and($detection->describe())->toContain('not observable');
+});
+
+it('reports ENFORCED only after the surface actually refused a stale pin', function (): void {
+    // The only positive proof available, and it is evidence rather than a
+    // precondition: a surface with one writer never rejects anything and is
+    // indistinguishable from one that cannot.
+    $surface = new ScriptedSurface([
+        textResult('graph', 'r1'),
+        ['error' => ['code' => 409]],
+    ]);
+    [$manager, $id] = surfaceManager($surface);
+
+    $manager->call('owner:1', $id, 'read_graph');
+    expect($manager->conflictDetection('owner:1', $id))->toBe(ConflictDetection::Minted);
+
+    try {
+        $manager->call('owner:1', $id, 'move_node');
+    } catch (SurfaceChangedUnderYou) {
+        // expected
+    }
+
+    expect($manager->conflictDetection('owner:1', $id))->toBe(ConflictDetection::Enforced)
+        ->and($manager->conflictDetection('owner:1', $id)->isProven())->toBeTrue();
+});
+
+it('never downgrades proven enforcement', function (): void {
+    // A later result that carries no revision must not walk Enforced back. The
+    // refusal happened; it cannot un-happen.
+    $surface = new ScriptedSurface([
+        textResult('graph', 'r1'),
+        ['error' => ['code' => 409]],
+        textResult('graph'),
+    ]);
+    [$manager, $id] = surfaceManager($surface);
+
+    $manager->call('owner:1', $id, 'read_graph');
+    try {
+        $manager->call('owner:1', $id, 'move_node');
+    } catch (SurfaceChangedUnderYou) {
+        // expected
+    }
+    $manager->call('owner:1', $id, 'read_graph');
+
+    expect($manager->conflictDetection('owner:1', $id))->toBe(ConflictDetection::Enforced);
+});
+
+it('upgrades out of Unavailable when a surface mints later after all', function (): void {
+    // The old boolean made the first verdict permanent, so a surface whose first
+    // result happened to carry no revision was written off for the life of the
+    // attachment. Minting once proves minting.
+    $surface = new ScriptedSurface([textResult('graph'), textResult('graph', 'r1')]);
+    [$manager, $id] = surfaceManager($surface);
+
+    $manager->call('owner:1', $id, 'read_graph');
+    expect($manager->conflictDetection('owner:1', $id))->toBe(ConflictDetection::Unavailable);
+
+    $manager->call('owner:1', $id, 'read_graph');
+    expect($manager->conflictDetection('owner:1', $id))->toBe(ConflictDetection::Minted);
+});
+
+it('reads a TOP-LEVEL revision key, which is the shape a real surface sends', function (): void {
+    // The first integrator returns `revision` as a plain key in the tool result
+    // body, NOT under _meta, and said plainly that narrowing to _meta would
+    // break them. Pinned here so nobody tidies the lookup down to one place.
+    $surface = new ScriptedSurface([
+        ['result' => ['content' => [['type' => 'text', 'text' => 'graph']], 'revision' => 41]],
+        textResult('moved'),
+    ]);
+    [$manager, $id] = surfaceManager($surface);
+
+    $manager->call('owner:1', $id, 'read_graph');
+    $manager->call('owner:1', $id, 'move_node');
+
+    // An integer counter, carried as a string marker because nothing here
+    // orders or compares it.
+    expect($surface->pinnedRevisions())->toBe([null, '41']);
 });
 
 it('refuses to keep writing to an unprotectable surface when asked to', function (): void {
@@ -275,9 +368,9 @@ it('does not refuse a surface that IS protecting itself', function (): void {
 });
 
 it('does not decide a surface is unprotectable because one result omitted a revision', function (): void {
-    // A surface that minted once and then had nothing new to say still supports
-    // revisions. Downgrading it to false would refuse writes on a surface
-    // protecting them perfectly well.
+    // A surface that minted once and then had nothing new to say still mints
+    // them. Downgrading would refuse writes on a surface protecting them
+    // perfectly well.
     $surface = new ScriptedSurface([textResult('graph', 'r1'), textResult('moved'), textResult('moved again')]);
     [$manager, $id] = surfaceManager($surface, requireRevision: true);
 
@@ -285,7 +378,28 @@ it('does not decide a surface is unprotectable because one result omitted a revi
     $manager->call('owner:1', $id, 'move_node');
     $manager->call('owner:1', $id, 'move_node');
 
-    expect($manager->conflictDetection('owner:1', $id))->toBeTrue();
+    expect($manager->conflictDetection('owner:1', $id))->toBe(ConflictDetection::Minted);
+});
+
+it('does NOT save a surface that mints and never enforces, and does not pretend to', function (): void {
+    // The integrator's surface exactly: mints on every result, reads an incoming
+    // pin nowhere, no rejection path. requireRevision is satisfied and every
+    // update would still be lost.
+    //
+    // This test asserts the LIMIT rather than a protection, because the limit is
+    // the honest thing to pin — a future change that made this throw would be
+    // refusing a surface it cannot distinguish from one that works.
+    $surface = new ScriptedSurface([textResult('graph', 'r1'), textResult('applied anyway', 'r2')]);
+    [$manager, $id] = surfaceManager($surface, requireRevision: true);
+
+    $manager->call('owner:1', $id, 'read_graph');
+    $manager->call('owner:1', $id, 'move_node');
+
+    // The write went through. The pin was sent and ignored, and nothing here
+    // can tell. Only the state's own wording protects the reader.
+    expect($surface->pinnedRevisions())->toBe([null, 'r1'])
+        ->and($manager->conflictDetection('owner:1', $id))->toBe(ConflictDetection::Minted)
+        ->and($manager->conflictDetection('owner:1', $id)->isProven())->toBeFalse();
 });
 
 it('carries a revision across processes, because a queue worker is a fresh one', function (): void {
