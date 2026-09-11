@@ -12,6 +12,7 @@ use Prism\HumanPlus\Contracts\AttachmentStore;
 use Prism\HumanPlus\Data\Participant;
 use Prism\HumanPlus\Data\SurfaceAttachment;
 use Prism\HumanPlus\Data\SurfaceInvitation;
+use Prism\HumanPlus\Data\SurfaceRevision;
 use Prism\HumanPlus\Enums\AttachmentState;
 use Prism\HumanPlus\Exceptions\HumanPlusException;
 
@@ -42,7 +43,23 @@ final readonly class LaravelAttachmentStore implements AttachmentStore
         $invitation = new SurfaceInvitation((string) $value['relay'], (string) $value['session'], (string) $value['token'], (string) $value['surface'], (string) $value['application'], (bool) ($value['allow_insecure_loopback'] ?? false));
         $participant = new Participant((string) $value['participant_id'], (string) $value['participant_name'], (string) $value['participant_color']);
 
-        return new SurfaceAttachment((string) $value['id'], (string) $value['owner'], $invitation, $participant, (string) $value['client'], (int) $value['generation'], AttachmentState::from((string) $value['state']));
+        // A revision only survives a round trip if it is stored, and it HAS to
+        // survive one: the agent that reads and the agent that writes are often
+        // different queue workers, so an in-memory marker would leave every
+        // write unpinned in precisely the deployment this protects.
+        $revision = is_array($value['revision'] ?? null) && is_string($value['revision']['token'] ?? null)
+            ? SurfaceRevision::observed($value['revision']['token'], (string) ($value['revision']['observed_from'] ?? 'unknown'))
+            : null;
+
+        return new SurfaceAttachment(
+            (string) $value['id'], (string) $value['owner'], $invitation, $participant, (string) $value['client'],
+            (int) $value['generation'], AttachmentState::from((string) $value['state']),
+            $revision,
+            // Absent for a row written before revisions existed. Null is the
+            // correct reading of that: not "this surface has none", but "nobody
+            // has looked yet" — which is what a fresh attachment says too.
+            isset($value['revisions_supported']) ? (bool) $value['revisions_supported'] : null,
+        );
     }
 
     public function put(SurfaceAttachment $attachment, ?int $expectedGeneration = null): void
@@ -58,6 +75,8 @@ final readonly class LaravelAttachmentStore implements AttachmentStore
             'participant_id' => $attachment->participant->id, 'participant_name' => $attachment->participant->name,
             'participant_color' => $attachment->participant->color, 'client' => $attachment->clientId,
             'generation' => $attachment->generation, 'state' => $attachment->state->value,
+            'revision' => $attachment->revision?->toArray(),
+            'revisions_supported' => $attachment->revisionsSupported,
         ];
         $json = json_encode($value, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
         $this->cache->store($this->store)->put($this->prefix.$attachment->id, $this->encrypter->encrypt($json, serialize: false), $this->ttlSeconds);

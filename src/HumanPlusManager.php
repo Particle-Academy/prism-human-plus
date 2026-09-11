@@ -10,10 +10,14 @@ use Prism\HumanPlus\Data\Activity;
 use Prism\HumanPlus\Data\Participant;
 use Prism\HumanPlus\Data\SurfaceAttachment;
 use Prism\HumanPlus\Data\SurfaceInvitation;
+use Prism\HumanPlus\Data\SurfaceRevision;
 use Prism\HumanPlus\Data\ToolDefinition;
 use Prism\HumanPlus\Enums\AttachmentState;
 use Prism\HumanPlus\Exceptions\AttachmentUnauthorized;
+use Prism\HumanPlus\Exceptions\ConflictDetectionUnavailable;
 use Prism\HumanPlus\Exceptions\HumanPlusException;
+use Prism\HumanPlus\Exceptions\SurfaceChangedUnderYou;
+use Prism\HumanPlus\Exceptions\SurfaceRevisionRejected;
 use Prism\HumanPlus\Exceptions\SurfaceUnavailable;
 use Prism\HumanPlus\Exceptions\ToolRefused;
 use Prism\HumanPlus\Security\ResultGuard;
@@ -30,8 +34,32 @@ final class HumanPlusManager
         private readonly AttachmentStore $store,
         private readonly TrustPolicy $trust,
         private readonly ResultGuard $guard,
+        /**
+         * Refuse calls to a surface that has proved it mints no revisions.
+         *
+         * Off by default, because a single-writer surface is a real and common
+         * case and refusing it would be this package inventing a requirement.
+         * ON is for a shared canvas, where a lost update is silent data loss —
+         * see {@see ConflictDetectionUnavailable} for why the absence has to be
+         * made loud rather than left to look like protection.
+         */
+        private readonly bool $requireRevision = false,
     ) {
         $this->client = new LegacyMcpClient($transport);
+    }
+
+    /**
+     * Can a lost update be DETECTED on this surface? Null until it has answered.
+     *
+     * A check rather than a claim, and callable at attach time so a host can
+     * assert it once instead of finding out mid-turn. `false` means the surface
+     * has answered at least one call and never minted a revision, so every write
+     * this package makes is unpinned and a concurrent human edit will be
+     * overwritten in silence.
+     */
+    public function conflictDetection(string|object $owner, string $id): ?bool
+    {
+        return $this->store->lock($id, fn (): ?bool => $this->required($owner, $id)->revisionsSupported);
     }
 
     public function attach(string|object $owner, SurfaceInvitation $invitation, Participant $participant): SurfaceAttachment
@@ -70,14 +98,46 @@ final class HumanPlusManager
                 throw new ToolRefused(sprintf('Human+ tool [%s] is not trusted or was not offered.', $tool));
             }
 
+            // The first call is always allowed: there is no way to know what a
+            // surface supplies before it has answered once, and refusing it
+            // would refuse the very read that finds out.
+            if ($this->requireRevision && $attachment->revisionsSupported === false) {
+                throw ConflictDetectionUnavailable::forSurface($attachment->invitation->surfaceId, $tool);
+            }
+
+            $pinned = $attachment->revision;
+
             try {
-                $result = $this->client->call($attachment, $tool, $arguments);
+                $result = $this->client->call($attachment, $tool, $arguments, $pinned);
             } catch (SurfaceUnavailable $failure) {
                 $this->store->put($attachment->transition(AttachmentState::SurfaceUnavailable), $attachment->generation);
                 throw $failure;
             } catch (AttachmentUnauthorized $failure) {
                 $this->store->put($attachment->transition(AttachmentState::Unauthorized), $attachment->generation);
                 throw $failure;
+            } catch (SurfaceRevisionRejected) {
+                // DROP THE MARKER, then refuse. Without the drop the agent is
+                // stuck: every later call carries the same stale token, and a
+                // surface that gates reads on it refuses the read that would
+                // refresh. The package cannot refresh on the agent's behalf
+                // because it does not know which tool is a read — getting out of
+                // the way is the recovery path it can offer.
+                //
+                // The attachment is NOT transitioned: a conflict is a normal
+                // outcome of two writers, not a lifecycle failure, and marking
+                // the surface unavailable would end a session that is healthy.
+                $this->store->put($attachment->withoutRevision(), $attachment->generation);
+
+                throw SurfaceChangedUnderYou::while($tool, $pinned);
+            }
+
+            $observed = SurfaceRevision::fromResult($result, $tool);
+            $next = $observed instanceof SurfaceRevision
+                ? $attachment->withRevision($observed)
+                : $attachment->observingNoRevision();
+
+            if ($next !== $attachment) {
+                $this->store->put($next, $attachment->generation);
             }
             $content = $result['content'] ?? [];
             $texts = [];

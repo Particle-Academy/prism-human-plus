@@ -8,6 +8,7 @@ use GuzzleHttp\ClientInterface;
 use Prism\HumanPlus\Data\SurfaceAttachment;
 use Prism\HumanPlus\Exceptions\AttachmentUnauthorized;
 use Prism\HumanPlus\Exceptions\HumanPlusException;
+use Prism\HumanPlus\Exceptions\SurfaceRevisionRejected;
 use Prism\HumanPlus\Exceptions\SurfaceUnavailable;
 use Psr\Http\Message\ResponseInterface;
 
@@ -200,9 +201,11 @@ final readonly class RelayEndpoint
     }
 
     /**
-     * Distinguish "the surface is gone" from "you are not allowed" from
-     * "something else broke", because a caller does different things with each
-     * and a generic failure makes all three look like a retry.
+     * Distinguish "the surface is gone" from "you are not allowed" from "your
+     * revision is stale" from "something else broke", because a caller does
+     * something different with each and a generic failure makes all four look
+     * like a retry — and a blind retry is exactly what turns a stale revision
+     * into a lost update.
      */
     public function assertLive(ResponseInterface $response, bool $detach = false): void
     {
@@ -219,6 +222,12 @@ final readonly class RelayEndpoint
         }
         if ($status === 401) {
             throw new AttachmentUnauthorized('The Fancy surface attachment is unauthorized.');
+        }
+        // A relay that enforces the revision itself answers 409 rather than
+        // passing a JSON-RPC error back, so both routes have to be recognised or
+        // a correctly-protecting relay still loses updates through this client.
+        if ($status === 409) {
+            throw new SurfaceRevisionRejected('The Fancy relay rejected the revision this call was pinned to.');
         }
         throw new HumanPlusException(sprintf('Fancy relay failed with HTTP %d.', $status));
     }

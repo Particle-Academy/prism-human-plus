@@ -197,6 +197,108 @@ query string because browser `EventSource` cannot set an Authorization header.
 Use redacted proxy/access logs and never emit relay URLs to telemetry. Relays
 that support header authentication can opt into `authMode: 'bearer'`.
 
-The package deliberately does not claim conflict resolution. Fancy currently
-provides staged writes, activity, presence, and undo; concurrent committed edits
-remain a surface-specific contract.
+## Two writers
+
+**A human editing the same surface as the agent used to lose their work in
+silence.** The agent read, the person committed, the agent wrote, and both
+writes succeeded — which is exactly what a lost update looks like from the
+inside. Nothing failed, so nothing was reported, and the only party who could
+tell was the person watching their change disappear.
+
+That is now detected. It is **not** resolved, and the difference matters.
+
+### What the package does
+
+Optimistic concurrency, with the comparison left where the knowledge is:
+
+1. A tool result may carry a **revision** — the surface's own marker for the
+   state it just showed. The package stores it on the attachment.
+2. Every later call is **pinned** to that marker.
+3. If the surface says the marker is stale, the call is refused with
+   `SurfaceChangedUnderYou` (code `surface_changed_under_you`), **nothing is
+   written**, and the stored marker is dropped so the agent can read again.
+
+The refusal is written to be read by a model mid-turn, because that is who
+receives it: it names the tool, the revision it was working from, and the one
+thing the agent must not do — repeat the call with the same arguments, which is
+how the other change gets overwritten.
+
+### What it deliberately does not do
+
+**It does not merge.** This package never models what a surface's state is —
+tools come from the surface's own `tools/list` and the data behind them is
+opaque here. A merge invented at this layer would be guessing at a document it
+cannot read, and it would be wrong silently. The agent is told its read is
+stale and decides; it is the only party in the exchange that knows what it was
+trying to achieve.
+
+**It does not know a read from a write**, so it pins every call. MCP's
+`readOnlyHint` is explicitly a hint the spec says not to trust for security
+decisions, and deciding from it would let a surface mark a mutating tool
+read-only and have its writes go out unpinned — the one direction that must not
+be possible. Pinning a read costs nothing, because a read overwrites nothing.
+
+### The surface has to hold up its half
+
+The relay and the surface are Fancy's, not this package's, so what is expected
+is stated rather than assumed. A surface participates by doing two things:
+
+**Mint a revision on results.** Any of these is read, because implementations
+differ and refusing four of five shapes would make each new surface a code
+change here:
+
+```json
+{"_meta": {"revision": "r42"}}      preferred — _meta is where MCP puts this
+{"revision": "r42"}
+{"surfaceRevision": "r42"}
+{"etag": "r42"}
+{"version": 42}
+```
+
+The marker is **opaque**: never parsed, never ordered, never compared here. An
+ETag, a row version, a Lamport counter, a content hash all work, and the package
+cannot tell which it is holding. It is capped at 512 bytes — a revision is an
+identifier, not a payload.
+
+**Reject a stale one.** The pin arrives as `params._meta.revision` on
+`tools/call`. Reject it with an HTTP 409, or a JSON-RPC error whose `code` or
+`data.code` is `409`, `conflict`, `revision_mismatch`, `revision_stale`,
+`stale_revision` or `precondition_failed`. All of those are recognised, because
+JSON-RPC has no precondition code of its own and a surface protecting its state
+correctly should not lose updates through this client over a spelling.
+
+### If the surface does none of that, the package says so
+
+This is the part worth reading twice. **Conflict detection depends entirely on
+the surface supplying a revision.** If it never does, the package carries
+nothing, pins nothing and detects nothing — while looking exactly as configured
+as one that is working.
+
+That is the failure this ecosystem keeps finding: a guard that reports success
+because it was never asked a question it could answer. So the absence is made
+visible two ways:
+
+```php
+$humanPlus->conflictDetection($owner, $id);
+// null  — the surface has not answered yet
+// true  — it mints revisions; a lost update will be caught
+// false — it has answered and never minted one; writes are UNPINNED
+```
+
+```php
+new HumanPlusManager($transport, $store, $trust, $guard, requireRevision: true);
+```
+
+With `requireRevision: true`, a surface that has answered and never minted a
+revision has its next call **refused** with `ConflictDetectionUnavailable`. The
+first call is always allowed — there is no way to know what a surface supplies
+before it has answered once, and refusing it would refuse the read that finds
+out. Off by default, because a single-writer surface is a real and common case
+and refusing it would be this package inventing a requirement.
+
+### Still not claimed
+
+Merge, operational transform, CRDTs, and any ordering of concurrent edits.
+Fancy provides staged writes, activity, presence and undo; what a *resolved*
+concurrent edit means remains a surface-specific contract. What has changed is
+that losing one is no longer silent.
