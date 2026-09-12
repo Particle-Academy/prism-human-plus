@@ -1,4 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd" bootstrap="vendor/autoload.php" colors="true">
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd" bootstrap="vendor/autoload.php" colors="true"
+         failOnRisky="true"
+>
+    <!--
+        A RISKY TEST FAILS THE BUILD.
+
+        PHPUnit calls a test risky when it asserts nothing, among other things —
+        which is precisely the failure this ecosystem keeps finding in its own
+        guards: a check that passes because it was never asked a question it
+        could answer. A probe with an inverted vacuity guard, a board reporting a
+        broken property green because its probe used a clean tool name, a
+        detector measuring the half that was cheap to measure.
+
+        Turning this on is the cheapest version of the mutation rule, and it
+        catches the one case the mutation rule is too slow for: a test that never
+        asserted anything at all. The connector-lab team lost a guard to exactly
+        that this week — assertions inside a loop over an empty list — and found
+        it only because PHPUnit flagged it while the flag was advisory.
+
+        Verified green in this repository before being switched on.
+    -->
+
     <testsuites><testsuite name="HumanPlus"><directory>tests</directory></testsuite></testsuites>
 </phpunit>
