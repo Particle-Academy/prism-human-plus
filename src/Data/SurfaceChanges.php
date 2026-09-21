@@ -60,6 +60,162 @@ final readonly class SurfaceChanges
     }
 
     /**
+     * Read a surface's answer into this shape.
+     *
+     * HERE RATHER THAN IN THE MANAGER, and not only for tidiness: this is the
+     * part three languages have to agree on byte for byte, so it has to be
+     * reachable by a conformance runner. A corpus that drove a private method
+     * through a scripted transport would be pinning the manager's plumbing as
+     * well, and one that re-implemented the read would pin what the runner
+     * believes rather than what the package does.
+     *
+     * Labels come back UNGUARDED. The manager frames them, because framing
+     * needs the surface id and a nonce, and a nonce is not comparable across
+     * languages. What is pinned here is the parse; the framing is pinned by
+     * each language's own tests.
+     *
+     * @param  array<string, mixed>  $result
+     */
+    public static function readFrom(array $result, ChangeFeed $feed): self
+    {
+        $changes = [];
+        $attributed = false;
+
+        foreach (self::rowsIn($result) as $row) {
+            $change = SurfaceChange::from($row);
+
+            if (! $change instanceof SurfaceChange) {
+                continue;
+            }
+
+            $changes[] = $change;
+
+            // Proof arrives only when the surface names a hand that is NOT this
+            // agent's. A feed that can only ever say "agent" has not shown it
+            // can tell a person's edit from its own.
+            if ($change->actor === ChangeActor::Human || $change->actor === ChangeActor::Other) {
+                $attributed = true;
+            }
+        }
+
+        return new self(
+            $attributed && $feed->isAnswerable() ? ChangeFeed::Attributed : $feed,
+            $changes,
+            SurfaceRevision::fromResult($result, 'changes'),
+            self::claimsComplete($result),
+        );
+    }
+
+    /**
+     * The rows of changes in whatever shape the surface returned them.
+     *
+     * `_meta` first, then the top level, the same order
+     * {@see SurfaceRevision::fromResult()} looks in and for the same reason:
+     * MCP puts implementation data there.
+     *
+     * @param  array<string, mixed>  $result
+     * @return list<array<string, mixed>>
+     */
+    private static function rowsIn(array $result): array
+    {
+        /** @var array<string, mixed> $meta */
+        $meta = is_array($result['_meta'] ?? null) ? $result['_meta'] : [];
+
+        foreach (['changes', 'change_log', 'changeLog', 'events', 'screens', 'items'] as $key) {
+            foreach ([$meta, $result] as $source) {
+                $value = $source[$key] ?? null;
+                if (is_array($value) && array_is_list($value)) {
+                    return array_values(array_filter($value, is_array(...)));
+                }
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * Did the surface claim this answer covers everything?
+     *
+     * **Complete unless it says otherwise.** The opposite default would mark
+     * every existing surface's answers partial for having never heard of the
+     * flag, which is a warning nobody can act on and everybody learns to skip.
+     *
+     * @param  array<string, mixed>  $result
+     */
+    private static function claimsComplete(array $result): bool
+    {
+        /** @var array<string, mixed> $meta */
+        $meta = is_array($result['_meta'] ?? null) ? $result['_meta'] : [];
+
+        foreach (['complete', 'is_complete', 'isComplete'] as $key) {
+            foreach ([$meta, $result] as $source) {
+                if (array_key_exists($key, $source)) {
+                    return (bool) $source[$key];
+                }
+            }
+        }
+
+        foreach (['partial', 'is_partial', 'isPartial', 'truncated'] as $key) {
+            foreach ([$meta, $result] as $source) {
+                if (array_key_exists($key, $source)) {
+                    return ! (bool) $source[$key];
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * The same answer with each label passed through a framer.
+     *
+     * The manager's hook for guarding surface text without this class knowing
+     * what guarding is.
+     *
+     * @param  callable(string): string  $framer
+     */
+    public function withFramedLabels(callable $framer): self
+    {
+        return new self(
+            $this->feed,
+            array_map(
+                fn (SurfaceChange $change): SurfaceChange => $change->label === ''
+                    ? $change
+                    : new SurfaceChange($change->handle, $change->kind, $change->actor, $framer($change->label)),
+                $this->changes,
+            ),
+            $this->revision,
+            $this->complete,
+        );
+    }
+
+    /**
+     * Everything a conformance runner compares, in one shape.
+     *
+     * The DERIVED answers are here as well as the parsed rows, because the
+     * derivations are the part a port is most likely to get subtly wrong: a
+     * language that parsed every row correctly and answered `nothingChanged()`
+     * on an unanswerable feed would agree on the easy half of this and be
+     * dangerous in production.
+     *
+     * @return array<string, mixed>
+     */
+    public function toArray(): array
+    {
+        return [
+            'feed' => $this->feed->value,
+            'complete' => $this->complete,
+            'answered' => $this->answered(),
+            'nothing_changed' => $this->nothingChanged(),
+            'attributes' => $this->attributes(),
+            'revision' => $this->revision?->token,
+            'changes' => array_map(fn (SurfaceChange $change): array => $change->toArray(), $this->changes),
+            'defer_to' => array_map(fn (SurfaceChange $change): string => $change->handle, $this->deferTo()),
+            'handles' => $this->handles(),
+        ];
+    }
+
+    /**
      * Did the surface actually answer the question?
      *
      * **Check this before reading {@see self::$changes}.** An empty list from a

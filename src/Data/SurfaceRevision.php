@@ -83,8 +83,23 @@ final readonly class SurfaceRevision
                 if (is_string($value) && trim($value) !== '') {
                     return self::observed($value, $observedFrom);
                 }
-                if (is_int($value)) {
-                    return self::observed((string) $value, $observedFrom);
+                // A JSON number that is a whole value, however the host
+                // language decoded it. PHP and Python tell int from float and
+                // JavaScript does not, so `1.0` arrived here as a float in two
+                // languages and an integer in the third — and rejecting it (the
+                // original behaviour) meant a surface that serialised a whole
+                // revision with a decimal point had its marker DROPPED, the
+                // next call went out unpinned, and lost-update protection
+                // disappeared for a detail the surface cannot control.
+                //
+                // Fractional and out-of-range values are refused in all three
+                // rather than accepted: `1.5` has no single spelling the three
+                // languages agree on (PHP and JavaScript write `1.5`, Python
+                // writes `1.5`, but an integral float splits `1` against
+                // `1.0`), and a marker that is not byte-identical everywhere is
+                // worse than no marker. Pinned by human-plus-change-feed.
+                if (is_int($value) || (is_float($value) && is_finite($value) && floor($value) === $value && abs($value) <= 9007199254740991)) {
+                    return self::observed((string) (int) $value, $observedFrom);
                 }
             }
         }

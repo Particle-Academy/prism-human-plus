@@ -1,0 +1,377 @@
+{
+  "suite": "human-plus-change-feed",
+  "schema_version": 1,
+  "corpus_version": "0.1.0",
+  "generated_by": "prism-parity:tools/generate-human-plus-changes.php for php; tools/record-human-plus-changes.mjs for ts and tools/record_human_plus_changes.py for py. Every output is execution output of SurfaceChanges::readFrom(), encoded as compact JSON with keys in the order each language wrote them.",
+  "pins_note": "What an agent learns when it asks a shared surface what changed since its last turn. A human and an agent edit the same surface, and the agent decides from this answer whether to re-read before writing. If one language reports an unanswerable feed as 'nothing changed', an agent in that language reverts a person's edit believing it is fixing drift — and nothing errors, in any layer, ever.",
+  "cases": [
+    {
+      "id": "hpc-0001",
+      "title": "the control: one change, named, attributed and kinded",
+      "since": "0.1.0",
+      "input": {
+        "result": "{\"_meta\":{\"revision\":\"r1\",\"changes\":[{\"screen_id\":\"screen_7\",\"change\":\"moved\",\"actor_type\":\"human\",\"title\":\"Budget\"}]}}",
+        "feed": "offered"
+      },
+      "rows": {
+        "php": "{\"feed\":\"attributed\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":true,\"revision\":\"r1\",\"changes\":[{\"handle\":\"screen_7\",\"kind\":\"moved\",\"actor\":\"human\",\"label\":\"Budget\"}],\"defer_to\":[\"screen_7\"],\"handles\":[\"screen_7\"]}",
+        "ts": "{\"feed\":\"attributed\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":true,\"revision\":\"r1\",\"changes\":[{\"handle\":\"screen_7\",\"kind\":\"moved\",\"actor\":\"human\",\"label\":\"Budget\"}],\"defer_to\":[\"screen_7\"],\"handles\":[\"screen_7\"]}",
+        "py": "{\"feed\":\"attributed\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":true,\"revision\":\"r1\",\"changes\":[{\"handle\":\"screen_7\",\"kind\":\"moved\",\"actor\":\"human\",\"label\":\"Budget\"}],\"defer_to\":[\"screen_7\"],\"handles\":[\"screen_7\"]}"
+      },
+      "agrees": true,
+      "notes": "The happy path, and the only row here that is not adversarial. It pins the whole envelope at once: a handle read from `screen_id`, a kind read from `change`, an actor read from `actor_type`, a label read from `title`, a marker read from `_meta.revision`, and the feed upgrading to `attributed` because a hand other than the agent's was named."
+    },
+    {
+      "id": "hpc-0002",
+      "title": "`kind` is the component type and `change` is the event, and a surface sends both",
+      "since": "0.1.0",
+      "input": {
+        "result": "{\"_meta\":{\"changes\":[{\"screen_id\":\"s1\",\"kind\":\"chart\",\"change\":\"updated\"}]}}",
+        "feed": "offered"
+      },
+      "rows": {
+        "php": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"s1\",\"kind\":\"updated\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"s1\"],\"handles\":[\"s1\"]}",
+        "ts": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"s1\",\"kind\":\"updated\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"s1\"],\"handles\":[\"s1\"]}",
+        "py": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"s1\",\"kind\":\"updated\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"s1\"],\"handles\":[\"s1\"]}"
+      },
+      "agrees": true,
+      "notes": "The collision that is already in the wild. The first surface asked returns `change` for what happened beside `kind` for the component type. A parser that reads `kind` as the event records every change as `unknown` AND silently promotes a component type into an event vocabulary. The change keys are read first for exactly this row."
+    },
+    {
+      "id": "hpc-0003",
+      "title": "a component `kind` ALONE is not an event kind",
+      "since": "0.1.0",
+      "input": {
+        "result": "{\"_meta\":{\"changes\":[{\"screen_id\":\"s1\",\"kind\":\"chart\"}]}}",
+        "feed": "offered"
+      },
+      "rows": {
+        "php": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"s1\",\"kind\":\"unknown\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"s1\"],\"handles\":[\"s1\"]}",
+        "ts": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"s1\",\"kind\":\"unknown\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"s1\"],\"handles\":[\"s1\"]}",
+        "py": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"s1\",\"kind\":\"unknown\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"s1\"],\"handles\":[\"s1\"]}"
+      },
+      "agrees": true,
+      "notes": "The other half of hpc-0002, and the one that says what the fallback may not do. `kind` is consulted only when no change key is present — and when it holds a component type, the answer must be `unknown` rather than a guess. A language that mapped unrecognised text onto `updated` would make every row of this shape look like an edit that happened."
+    },
+    {
+      "id": "hpc-0004",
+      "title": "the first consumer's own vocabulary, including `removed`",
+      "since": "0.1.0",
+      "input": {
+        "result": "{\"_meta\":{\"changes\":[{\"screen_id\":\"a\",\"change\":\"created\"},{\"screen_id\":\"b\",\"change\":\"updated\"},{\"screen_id\":\"c\",\"change\":\"moved\"},{\"screen_id\":\"d\",\"change\":\"removed\"}]}}",
+        "feed": "offered"
+      },
+      "rows": {
+        "php": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"a\",\"kind\":\"created\",\"actor\":\"unknown\",\"label\":\"\"},{\"handle\":\"b\",\"kind\":\"updated\",\"actor\":\"unknown\",\"label\":\"\"},{\"handle\":\"c\",\"kind\":\"moved\",\"actor\":\"unknown\",\"label\":\"\"},{\"handle\":\"d\",\"kind\":\"deleted\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"a\",\"b\",\"c\",\"d\"],\"handles\":[\"a\",\"b\",\"c\",\"d\"]}",
+        "ts": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"a\",\"kind\":\"created\",\"actor\":\"unknown\",\"label\":\"\"},{\"handle\":\"b\",\"kind\":\"updated\",\"actor\":\"unknown\",\"label\":\"\"},{\"handle\":\"c\",\"kind\":\"moved\",\"actor\":\"unknown\",\"label\":\"\"},{\"handle\":\"d\",\"kind\":\"deleted\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"a\",\"b\",\"c\",\"d\"],\"handles\":[\"a\",\"b\",\"c\",\"d\"]}",
+        "py": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"a\",\"kind\":\"created\",\"actor\":\"unknown\",\"label\":\"\"},{\"handle\":\"b\",\"kind\":\"updated\",\"actor\":\"unknown\",\"label\":\"\"},{\"handle\":\"c\",\"kind\":\"moved\",\"actor\":\"unknown\",\"label\":\"\"},{\"handle\":\"d\",\"kind\":\"deleted\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"a\",\"b\",\"c\",\"d\"],\"handles\":[\"a\",\"b\",\"c\",\"d\"]}"
+      },
+      "agrees": true,
+      "notes": "The four values the first consumer proposes for their append-only log. `removed` is the one that would land on `unknown` if nobody checked, and it is the one whose absence from their feed today is the hole they found in their own store."
+    },
+    {
+      "id": "hpc-0005",
+      "title": "an actor nobody recognises is UNKNOWN, never a default",
+      "since": "0.1.0",
+      "input": {
+        "result": "{\"_meta\":{\"changes\":[{\"screen_id\":\"s1\",\"change\":\"updated\",\"actor_type\":\"sales-team\"}]}}",
+        "feed": "offered"
+      },
+      "rows": {
+        "php": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"s1\",\"kind\":\"updated\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"s1\"],\"handles\":[\"s1\"]}",
+        "ts": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"s1\",\"kind\":\"updated\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"s1\"],\"handles\":[\"s1\"]}",
+        "py": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"s1\",\"kind\":\"updated\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"s1\"],\"handles\":[\"s1\"]}"
+      },
+      "agrees": true,
+      "notes": "A surface that says `sales-team` means something. A language that quietly resolved an unrecognised actor to `agent` would hand this package the revert bug through its own parser: the agent would treat a stranger's edit as its own work and correct it. Staying `unknown` is what keeps it deferred to."
+    },
+    {
+      "id": "hpc-0006",
+      "title": "`revision: true` is not a marker — bool is an int in exactly one of these languages",
+      "since": "0.1.0",
+      "input": {
+        "result": "{\"_meta\":{\"revision\":true,\"changes\":[]}}",
+        "feed": "offered"
+      },
+      "rows": {
+        "php": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":true,\"attributes\":false,\"revision\":null,\"changes\":[],\"defer_to\":[],\"handles\":[]}",
+        "ts": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":true,\"attributes\":false,\"revision\":null,\"changes\":[],\"defer_to\":[],\"handles\":[]}",
+        "py": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":true,\"attributes\":false,\"revision\":null,\"changes\":[],\"defer_to\":[],\"handles\":[]}"
+      },
+      "agrees": true,
+      "notes": "ADVERSARIAL, and the row most likely to divide the three. `True` is an instance of `int` in Python and of nothing in PHP or JavaScript, so an unguarded numeric branch reads this as the marker `\"True\"` and pins every later call to a value no surface ever minted. The correct answer is that no revision was present."
+    },
+    {
+      "id": "hpc-0007",
+      "title": "a numeric handle is carried as text; a boolean handle is not a handle",
+      "since": "0.1.0",
+      "input": {
+        "result": "{\"_meta\":{\"changes\":[{\"id\":42,\"change\":\"updated\"},{\"id\":true,\"change\":\"updated\"}]}}",
+        "feed": "offered"
+      },
+      "rows": {
+        "php": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"42\",\"kind\":\"updated\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"42\"],\"handles\":[\"42\"]}",
+        "ts": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"42\",\"kind\":\"updated\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"42\"],\"handles\":[\"42\"]}",
+        "py": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"42\",\"kind\":\"updated\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"42\"],\"handles\":[\"42\"]}"
+      },
+      "agrees": true,
+      "notes": "The same trap one field over. An integer id is a handle and becomes `\"42\"`; `true` is not an id in any surface's data model, and a language that accepted it would emit the handle `\"1\"` or `\"true\"` and tell an agent to re-read something that does not exist. The second row is dropped."
+    },
+    {
+      "id": "hpc-0008",
+      "title": "a change nobody can point at is dropped, and the rest survive",
+      "since": "0.1.0",
+      "input": {
+        "result": "{\"_meta\":{\"changes\":[{\"change\":\"updated\"},{\"screen_id\":\"s2\",\"change\":\"moved\"}]}}",
+        "feed": "offered"
+      },
+      "rows": {
+        "php": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"s2\",\"kind\":\"moved\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"s2\"],\"handles\":[\"s2\"]}",
+        "ts": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"s2\",\"kind\":\"moved\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"s2\"],\"handles\":[\"s2\"]}",
+        "py": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"s2\",\"kind\":\"moved\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"s2\"],\"handles\":[\"s2\"]}"
+      },
+      "agrees": true,
+      "notes": "A row with no handle cannot be handed to an agent — there is nothing to re-read. It is dropped rather than given an invented id, and dropping it must not discard the rows around it. A language that failed the whole read on one malformed row would let a surface hide every change by including one bad one."
+    },
+    {
+      "id": "hpc-0009",
+      "title": "nothing changed, and the surface was in a position to say so",
+      "since": "0.1.0",
+      "input": {
+        "result": "{\"_meta\":{\"revision\":\"r9\",\"changes\":[]}}",
+        "feed": "offered"
+      },
+      "rows": {
+        "php": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":true,\"attributes\":false,\"revision\":\"r9\",\"changes\":[],\"defer_to\":[],\"handles\":[]}",
+        "ts": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":true,\"attributes\":false,\"revision\":\"r9\",\"changes\":[],\"defer_to\":[],\"handles\":[]}",
+        "py": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":true,\"attributes\":false,\"revision\":\"r9\",\"changes\":[],\"defer_to\":[],\"handles\":[]}"
+      },
+      "agrees": true,
+      "notes": "One half of the pair that is the entire point of this suite."
+    },
+    {
+      "id": "hpc-0010",
+      "title": "NOTHING CHANGED and CANNOT SAY are the same empty list on the wire",
+      "since": "0.1.0",
+      "input": {
+        "result": "{\"_meta\":{\"changes\":[]}}",
+        "feed": "unavailable"
+      },
+      "rows": {
+        "php": "{\"feed\":\"unavailable\",\"complete\":true,\"answered\":false,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[],\"defer_to\":[],\"handles\":[]}",
+        "ts": "{\"feed\":\"unavailable\",\"complete\":true,\"answered\":false,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[],\"defer_to\":[],\"handles\":[]}",
+        "py": "{\"feed\":\"unavailable\",\"complete\":true,\"answered\":false,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[],\"defer_to\":[],\"handles\":[]}"
+      },
+      "agrees": true,
+      "notes": "The other half, and the property this whole family exists for. Byte for byte the input is hpc-0009 without a marker; the answer must differ, because `answered` is false and `nothing_changed` must NOT be true. An agent that reads an unanswerable feed as quiet is the agent that reverts a person's edit believing it is fixing drift. A language that returned a bare list would agree with the others on the list and be dangerous in production."
+    },
+    {
+      "id": "hpc-0011",
+      "title": "a surface admitting its answer is PARTIAL is not a surface reporting calm",
+      "since": "0.1.0",
+      "input": {
+        "result": "{\"_meta\":{\"revision\":\"r3\",\"changes\":[],\"complete\":false}}",
+        "feed": "offered"
+      },
+      "rows": {
+        "php": "{\"feed\":\"offered\",\"complete\":false,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":\"r3\",\"changes\":[],\"defer_to\":[],\"handles\":[]}",
+        "ts": "{\"feed\":\"offered\",\"complete\":false,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":\"r3\",\"changes\":[],\"defer_to\":[],\"handles\":[]}",
+        "py": "{\"feed\":\"offered\",\"complete\":false,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":\"r3\",\"changes\":[],\"defer_to\":[],\"handles\":[]}"
+      },
+      "agrees": true,
+      "notes": "The first surface asked hard-deletes rows with no tombstone, so a removal moves no revision and appears in no feed: `nothing changed` is what it says when a screen was destroyed. A package cannot detect that from outside — it can carry the admission, and `nothing_changed` must be false despite an empty list."
+    },
+    {
+      "id": "hpc-0012",
+      "title": "`partial: true` is read as the inverse of complete",
+      "since": "0.1.0",
+      "input": {
+        "result": "{\"_meta\":{\"changes\":[{\"screen_id\":\"s1\",\"change\":\"updated\"}],\"partial\":true}}",
+        "feed": "offered"
+      },
+      "rows": {
+        "php": "{\"feed\":\"offered\",\"complete\":false,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"s1\",\"kind\":\"updated\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"s1\"],\"handles\":[\"s1\"]}",
+        "ts": "{\"feed\":\"offered\",\"complete\":false,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"s1\",\"kind\":\"updated\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"s1\"],\"handles\":[\"s1\"]}",
+        "py": "{\"feed\":\"offered\",\"complete\":false,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"s1\",\"kind\":\"updated\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"s1\"],\"handles\":[\"s1\"]}"
+      },
+      "agrees": true,
+      "notes": "Two spellings of one fact, and a language reading only `complete` would report this answer as whole. The inversion is checked AFTER the positive key, so a surface sending both is read by the one it stated directly."
+    },
+    {
+      "id": "hpc-0013",
+      "title": "a feed that has only ever said `agent` has proven nothing",
+      "since": "0.1.0",
+      "input": {
+        "result": "{\"_meta\":{\"changes\":[{\"screen_id\":\"s1\",\"change\":\"updated\",\"actor_type\":\"agent\"}]}}",
+        "feed": "offered"
+      },
+      "rows": {
+        "php": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"s1\",\"kind\":\"updated\",\"actor\":\"agent\",\"label\":\"\"}],\"defer_to\":[],\"handles\":[\"s1\"]}",
+        "ts": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"s1\",\"kind\":\"updated\",\"actor\":\"agent\",\"label\":\"\"}],\"defer_to\":[],\"handles\":[\"s1\"]}",
+        "py": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"s1\",\"kind\":\"updated\",\"actor\":\"agent\",\"label\":\"\"}],\"defer_to\":[],\"handles\":[\"s1\"]}"
+      },
+      "agrees": true,
+      "notes": "Evidence when it arrives, never a precondition — the rule `ConflictDetection::Enforced` already follows. Naming the agent does not show a surface can tell a PERSON's edit from the agent's own, so the feed stays `offered`. The change is still not deferred to, because the surface positively said whose it was."
+    },
+    {
+      "id": "hpc-0014",
+      "title": "a named hand other than the agent's upgrades the feed, and only the agent's own is excluded",
+      "since": "0.1.0",
+      "input": {
+        "result": "{\"_meta\":{\"changes\":[{\"screen_id\":\"mine\",\"change\":\"updated\",\"actor_type\":\"agent\"},{\"screen_id\":\"theirs\",\"change\":\"moved\",\"actor_type\":\"human\"},{\"screen_id\":\"nobodys\",\"change\":\"updated\"}]}}",
+        "feed": "offered"
+      },
+      "rows": {
+        "php": "{\"feed\":\"attributed\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":true,\"revision\":null,\"changes\":[{\"handle\":\"mine\",\"kind\":\"updated\",\"actor\":\"agent\",\"label\":\"\"},{\"handle\":\"theirs\",\"kind\":\"moved\",\"actor\":\"human\",\"label\":\"\"},{\"handle\":\"nobodys\",\"kind\":\"updated\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"theirs\",\"nobodys\"],\"handles\":[\"mine\",\"theirs\",\"nobodys\"]}",
+        "ts": "{\"feed\":\"attributed\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":true,\"revision\":null,\"changes\":[{\"handle\":\"mine\",\"kind\":\"updated\",\"actor\":\"agent\",\"label\":\"\"},{\"handle\":\"theirs\",\"kind\":\"moved\",\"actor\":\"human\",\"label\":\"\"},{\"handle\":\"nobodys\",\"kind\":\"updated\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"theirs\",\"nobodys\"],\"handles\":[\"mine\",\"theirs\",\"nobodys\"]}",
+        "py": "{\"feed\":\"attributed\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":true,\"revision\":null,\"changes\":[{\"handle\":\"mine\",\"kind\":\"updated\",\"actor\":\"agent\",\"label\":\"\"},{\"handle\":\"theirs\",\"kind\":\"moved\",\"actor\":\"human\",\"label\":\"\"},{\"handle\":\"nobodys\",\"kind\":\"updated\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"theirs\",\"nobodys\"],\"handles\":[\"mine\",\"theirs\",\"nobodys\"]}"
+      },
+      "agrees": true,
+      "notes": "The whole deference rule in one row. `defer_to` keeps the human's change and the unattributed one and drops only the change the surface said was the agent's. An earlier draft branched on whether the feed had PROVEN attribution and deferred to everything until it had, discarding per-change answers already given — not having information is a different mistake from throwing it away."
+    },
+    {
+      "id": "hpc-0015",
+      "title": "attribution cannot upgrade a feed that cannot answer",
+      "since": "0.1.0",
+      "input": {
+        "result": "{\"_meta\":{\"changes\":[{\"screen_id\":\"s1\",\"change\":\"moved\",\"actor_type\":\"human\"}]}}",
+        "feed": "unavailable"
+      },
+      "rows": {
+        "php": "{\"feed\":\"unavailable\",\"complete\":true,\"answered\":false,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"s1\",\"kind\":\"moved\",\"actor\":\"human\",\"label\":\"\"}],\"defer_to\":[],\"handles\":[\"s1\"]}",
+        "ts": "{\"feed\":\"unavailable\",\"complete\":true,\"answered\":false,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"s1\",\"kind\":\"moved\",\"actor\":\"human\",\"label\":\"\"}],\"defer_to\":[],\"handles\":[\"s1\"]}",
+        "py": "{\"feed\":\"unavailable\",\"complete\":true,\"answered\":false,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"s1\",\"kind\":\"moved\",\"actor\":\"human\",\"label\":\"\"}],\"defer_to\":[],\"handles\":[\"s1\"]}"
+      },
+      "agrees": true,
+      "notes": "A surface with no feed tool that somehow returns attributed rows has still not got a feed. Upgrading here would let a single crafted result make an unanswerable surface look `attributed` for the rest of the session, which is a state this package treats as permanent proof."
+    },
+    {
+      "id": "hpc-0016",
+      "title": "`_meta` wins over the top level, the same order a revision is read in",
+      "since": "0.1.0",
+      "input": {
+        "result": "{\"_meta\":{\"changes\":[{\"screen_id\":\"from_meta\",\"change\":\"updated\"}]},\"changes\":[{\"screen_id\":\"from_top\",\"change\":\"updated\"}]}",
+        "feed": "offered"
+      },
+      "rows": {
+        "php": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"from_meta\",\"kind\":\"updated\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"from_meta\"],\"handles\":[\"from_meta\"]}",
+        "ts": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"from_meta\",\"kind\":\"updated\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"from_meta\"],\"handles\":[\"from_meta\"]}",
+        "py": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"from_meta\",\"kind\":\"updated\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"from_meta\"],\"handles\":[\"from_meta\"]}"
+      },
+      "agrees": true,
+      "notes": "MCP puts implementation data in `_meta`, so it is read first. A surface sending both is not a surface a package should have an opinion about — but the two languages that picked different ones would hand two agents different conversations."
+    },
+    {
+      "id": "hpc-0017",
+      "title": "the top level is read when `_meta` has nothing to say",
+      "since": "0.1.0",
+      "input": {
+        "result": "{\"changes\":[{\"screen_id\":\"s1\",\"change\":\"created\"}],\"complete\":true}",
+        "feed": "offered"
+      },
+      "rows": {
+        "php": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"s1\",\"kind\":\"created\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"s1\"],\"handles\":[\"s1\"]}",
+        "ts": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"s1\",\"kind\":\"created\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"s1\"],\"handles\":[\"s1\"]}",
+        "py": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"s1\",\"kind\":\"created\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"s1\"],\"handles\":[\"s1\"]}"
+      },
+      "agrees": true,
+      "notes": "The fallback, pinned so it cannot quietly stop working. A surface with no `_meta` at all is the common shape outside MCP."
+    },
+    {
+      "id": "hpc-0018",
+      "title": "spellings are matched case-insensitively and trimmed",
+      "since": "0.1.0",
+      "input": {
+        "result": "{\"_meta\":{\"changes\":[{\"screen_id\":\"s1\",\"change\":\"  MOVED  \",\"actor_type\":\"Human\"}]}}",
+        "feed": "offered"
+      },
+      "rows": {
+        "php": "{\"feed\":\"attributed\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":true,\"revision\":null,\"changes\":[{\"handle\":\"s1\",\"kind\":\"moved\",\"actor\":\"human\",\"label\":\"\"}],\"defer_to\":[\"s1\"],\"handles\":[\"s1\"]}",
+        "ts": "{\"feed\":\"attributed\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":true,\"revision\":null,\"changes\":[{\"handle\":\"s1\",\"kind\":\"moved\",\"actor\":\"human\",\"label\":\"\"}],\"defer_to\":[\"s1\"],\"handles\":[\"s1\"]}",
+        "py": "{\"feed\":\"attributed\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":true,\"revision\":null,\"changes\":[{\"handle\":\"s1\",\"kind\":\"moved\",\"actor\":\"human\",\"label\":\"\"}],\"defer_to\":[\"s1\"],\"handles\":[\"s1\"]}"
+      },
+      "agrees": true,
+      "notes": "Surfaces are written by people. Matching only the exact lowercase token would make this row `unknown`/`unknown` and silently stop deferring to a person's edit — the failure mode being guarded against, reached through capitalisation."
+    },
+    {
+      "id": "hpc-0019",
+      "title": "a `changes` value that is not a list yields no rows rather than a crash",
+      "since": "0.1.0",
+      "input": {
+        "result": "{\"_meta\":{\"changes\":{\"screen_id\":\"s1\",\"change\":\"updated\"}}}",
+        "feed": "offered"
+      },
+      "rows": {
+        "php": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":true,\"attributes\":false,\"revision\":null,\"changes\":[],\"defer_to\":[],\"handles\":[]}",
+        "ts": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":true,\"attributes\":false,\"revision\":null,\"changes\":[],\"defer_to\":[],\"handles\":[]}",
+        "py": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":true,\"attributes\":false,\"revision\":null,\"changes\":[],\"defer_to\":[],\"handles\":[]}"
+      },
+      "agrees": true,
+      "notes": "A hostile or broken surface sending an object where a list belongs must not take the turn down, and must not be read as one change either. The answer is an empty list from a feed that answered — which is exactly why `complete` and `answered` are separate from the list itself."
+    },
+    {
+      "id": "hpc-0020",
+      "title": "handles are de-duplicated and keep first-seen order",
+      "since": "0.1.0",
+      "input": {
+        "result": "{\"_meta\":{\"changes\":[{\"screen_id\":\"b\",\"change\":\"updated\"},{\"screen_id\":\"a\",\"change\":\"moved\"},{\"screen_id\":\"b\",\"change\":\"moved\"}]}}",
+        "feed": "offered"
+      },
+      "rows": {
+        "php": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"b\",\"kind\":\"updated\",\"actor\":\"unknown\",\"label\":\"\"},{\"handle\":\"a\",\"kind\":\"moved\",\"actor\":\"unknown\",\"label\":\"\"},{\"handle\":\"b\",\"kind\":\"moved\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"b\",\"a\",\"b\"],\"handles\":[\"b\",\"a\"]}",
+        "ts": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"b\",\"kind\":\"updated\",\"actor\":\"unknown\",\"label\":\"\"},{\"handle\":\"a\",\"kind\":\"moved\",\"actor\":\"unknown\",\"label\":\"\"},{\"handle\":\"b\",\"kind\":\"moved\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"b\",\"a\",\"b\"],\"handles\":[\"b\",\"a\"]}",
+        "py": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":false,\"attributes\":false,\"revision\":null,\"changes\":[{\"handle\":\"b\",\"kind\":\"updated\",\"actor\":\"unknown\",\"label\":\"\"},{\"handle\":\"a\",\"kind\":\"moved\",\"actor\":\"unknown\",\"label\":\"\"},{\"handle\":\"b\",\"kind\":\"moved\",\"actor\":\"unknown\",\"label\":\"\"}],\"defer_to\":[\"b\",\"a\",\"b\"],\"handles\":[\"b\",\"a\"]}"
+      },
+      "agrees": true,
+      "notes": "An agent re-reads by handle, so the list it re-reads from must not contain the same handle twice or arrive in an order that differs by language. Insertion order, not sorted: sorting would be this package inventing a priority the surface did not state."
+    },
+    {
+      "id": "hpc-0022",
+      "title": "a FRACTIONAL revision is refused, because three languages cannot spell it alike",
+      "since": "0.1.0",
+      "input": {
+        "result": "{\"_meta\":{\"revision\":1.5,\"changes\":[]}}",
+        "feed": "offered"
+      },
+      "rows": {
+        "php": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":true,\"attributes\":false,\"revision\":null,\"changes\":[],\"defer_to\":[],\"handles\":[]}",
+        "ts": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":true,\"attributes\":false,\"revision\":null,\"changes\":[],\"defer_to\":[],\"handles\":[]}",
+        "py": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":true,\"attributes\":false,\"revision\":null,\"changes\":[],\"defer_to\":[],\"handles\":[]}"
+      },
+      "agrees": true,
+      "notes": "The boundary the hpc-0021 fix creates, and the reason it stops where it does. A whole number is accepted however the host decoded it; a fractional one is refused in all three. Not because a surface may not mint `1.5` — markers are opaque — but because a marker that is not byte-identical in every language is worse than no marker: it is echoed back on the next call, and a surface enforcing the pin would refuse whichever agent spelled it differently. Refusing loudly in three languages beats agreeing in two."
+    },
+    {
+      "id": "hpc-0023",
+      "title": "a revision beyond safe-integer range is refused rather than rounded",
+      "since": "0.1.0",
+      "input": {
+        "result": "{\"_meta\":{\"revision\":1e20,\"changes\":[]}}",
+        "feed": "offered"
+      },
+      "rows": {
+        "php": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":true,\"attributes\":false,\"revision\":null,\"changes\":[],\"defer_to\":[],\"handles\":[]}",
+        "ts": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":true,\"attributes\":false,\"revision\":null,\"changes\":[],\"defer_to\":[],\"handles\":[]}",
+        "py": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":true,\"attributes\":false,\"revision\":null,\"changes\":[],\"defer_to\":[],\"handles\":[]}"
+      },
+      "agrees": true,
+      "notes": "The other end of the same boundary. Past 2^53-1 the three languages stop agreeing on what the number even is — JavaScript has no integer wider than a double, PHP casts to a platform int, Python does not — so a counter that grew that large would be pinned to three different strings. Refused everywhere, at the same threshold, spelled as a literal in all three rather than as each language's own MAX."
+    },
+    {
+      "id": "hpc-0021",
+      "title": "an integral float revision, which is the G-35 shape in a new family",
+      "since": "0.1.0",
+      "input": {
+        "result": "{\"_meta\":{\"revision\":1.0,\"changes\":[]}}",
+        "feed": "offered"
+      },
+      "rows": {
+        "php": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":true,\"attributes\":false,\"revision\":\"1\",\"changes\":[],\"defer_to\":[],\"handles\":[]}",
+        "ts": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":true,\"attributes\":false,\"revision\":\"1\",\"changes\":[],\"defer_to\":[],\"handles\":[]}",
+        "py": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":true,\"attributes\":false,\"revision\":\"1\",\"changes\":[],\"defer_to\":[],\"handles\":[]}"
+      },
+      "agrees": true,
+      "notes": "`human-plus-tool-admission` G-35 records that an integral float digests as `1` in PHP and JavaScript and `1.0` in Python. A revision marker is compared as text and echoed back on every later call, so the same split here would mean two agents pinning the same surface state to two different strings — and a surface enforcing the pin would refuse one of them. Carried as raw text so the float survives into the test."
+    }
+  ]
+}

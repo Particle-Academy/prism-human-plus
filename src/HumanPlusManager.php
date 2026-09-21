@@ -9,13 +9,12 @@ use Prism\HumanPlus\Contracts\RelayTransport;
 use Prism\HumanPlus\Data\Activity;
 use Prism\HumanPlus\Data\Participant;
 use Prism\HumanPlus\Data\SurfaceAttachment;
-use Prism\HumanPlus\Data\SurfaceChange;
 use Prism\HumanPlus\Data\SurfaceChanges;
 use Prism\HumanPlus\Data\SurfaceInvitation;
 use Prism\HumanPlus\Data\SurfaceRevision;
 use Prism\HumanPlus\Data\ToolDefinition;
 use Prism\HumanPlus\Enums\AttachmentState;
-use Prism\HumanPlus\Enums\ChangeActor;
+use Prism\HumanPlus\Enums\ChangeFeed;
 use Prism\HumanPlus\Enums\ConflictDetection;
 use Prism\HumanPlus\Exceptions\AttachmentUnauthorized;
 use Prism\HumanPlus\Exceptions\ConflictDetectionUnavailable;
@@ -172,117 +171,24 @@ final class HumanPlusManager
                 throw SurfaceChangedUnderYou::while($feedTool->name, $pinned);
             }
 
-            $changes = [];
-            $attributed = false;
+            // Parsed where a conformance runner can reach it. The manager's
+            // job here is the guard and the attachment, not the shape.
+            $answer = SurfaceChanges::readFrom($result, $attachment->changeFeed);
 
-            foreach (self::changeRows($result) as $row) {
-                $change = SurfaceChange::from($row);
-                if (! $change instanceof SurfaceChange) {
-                    continue;
-                }
-                // The surface's own words, guarded like any other text coming
-                // back from a running application.
-                $changes[] = $change->label === ''
-                    ? $change
-                    : new SurfaceChange(
-                        $change->handle,
-                        $change->kind,
-                        $change->actor,
-                        $this->guard->guard($attachment->invitation->surfaceId, $feedTool->name, $change->label),
-                    );
-
-                // Proof arrives only when the surface names a hand that is NOT
-                // this agent's. A feed that can only ever say "agent" has not
-                // shown it can tell a person's edit from its own, which is the
-                // capability being claimed. Evidence when it arrives, never a
-                // precondition — the same rule as ConflictDetection::Enforced.
-                if ($change->actor === ChangeActor::Human || $change->actor === ChangeActor::Other) {
-                    $attributed = true;
-                }
+            if ($answer->revision instanceof SurfaceRevision) {
+                $attachment = $attachment->withRevision($answer->revision);
             }
 
-            $observed = SurfaceRevision::fromResult($result, $feedTool->name);
-            $attachment = $observed instanceof SurfaceRevision
-                ? $attachment->withRevision($observed)
-                : $attachment;
-
-            if ($attributed) {
+            if ($answer->feed === ChangeFeed::Attributed) {
                 $attachment = $attachment->observingAttribution();
             }
 
             $this->store->put($attachment, $attachment->generation);
 
-            return new SurfaceChanges(
-                $attachment->changeFeed,
-                $changes,
-                $attachment->revision,
-                self::claimsComplete($result),
+            return $answer->withFramedLabels(
+                fn (string $label): string => $this->guard->guard($attachment->invitation->surfaceId, $feedTool->name, $label),
             );
         });
-    }
-
-    /**
-     * The rows of changes in whatever shape the surface returned them.
-     *
-     * `_meta` first, then the top level, the same order
-     * {@see SurfaceRevision::fromResult()} looks in and for the same reason:
-     * MCP puts implementation data there.
-     *
-     * @param  array<string, mixed>  $result
-     * @return list<array<string, mixed>>
-     */
-    private static function changeRows(array $result): array
-    {
-        /** @var array<string, mixed> $meta */
-        $meta = is_array($result['_meta'] ?? null) ? $result['_meta'] : [];
-
-        foreach (['changes', 'change_log', 'changeLog', 'events', 'screens', 'items'] as $key) {
-            foreach ([$meta, $result] as $source) {
-                $value = $source[$key] ?? null;
-                if (is_array($value) && array_is_list($value)) {
-                    return array_values(array_filter($value, is_array(...)));
-                }
-            }
-        }
-
-        return [];
-    }
-
-    /**
-     * Did the surface claim this answer covers everything?
-     *
-     * **Complete unless it says otherwise.** The opposite default would mark
-     * every existing surface's answers partial for having never heard of the
-     * flag, which is a warning nobody can act on and everybody learns to skip.
-     *
-     * A surface that knows its feed has a hole — the first one asked hard-deletes
-     * rows with no tombstone, so a removal is invisible to it — can say so, and
-     * that admission reaches the caller intact.
-     *
-     * @param  array<string, mixed>  $result
-     */
-    private static function claimsComplete(array $result): bool
-    {
-        /** @var array<string, mixed> $meta */
-        $meta = is_array($result['_meta'] ?? null) ? $result['_meta'] : [];
-
-        foreach (['complete', 'is_complete', 'isComplete'] as $key) {
-            foreach ([$meta, $result] as $source) {
-                if (array_key_exists($key, $source)) {
-                    return (bool) $source[$key];
-                }
-            }
-        }
-
-        foreach (['partial', 'is_partial', 'isPartial', 'truncated'] as $key) {
-            foreach ([$meta, $result] as $source) {
-                if (array_key_exists($key, $source)) {
-                    return ! (bool) $source[$key];
-                }
-            }
-        }
-
-        return true;
     }
 
     public function attach(string|object $owner, SurfaceInvitation $invitation, Participant $participant): SurfaceAttachment
