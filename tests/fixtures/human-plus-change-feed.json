@@ -326,6 +326,22 @@
       "notes": "An agent re-reads by handle, so the list it re-reads from must not contain the same handle twice or arrive in an order that differs by language. Insertion order, not sorted: sorting would be this package inventing a priority the surface did not state."
     },
     {
+      "id": "hpc-0021",
+      "title": "an integral float revision, which is the G-35 shape in a new family",
+      "since": "0.1.0",
+      "input": {
+        "result": "{\"_meta\":{\"revision\":1.0,\"changes\":[]}}",
+        "feed": "offered"
+      },
+      "rows": {
+        "php": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":true,\"attributes\":false,\"revision\":\"1\",\"changes\":[],\"defer_to\":[],\"handles\":[]}",
+        "ts": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":true,\"attributes\":false,\"revision\":\"1\",\"changes\":[],\"defer_to\":[],\"handles\":[]}",
+        "py": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":true,\"attributes\":false,\"revision\":\"1\",\"changes\":[],\"defer_to\":[],\"handles\":[]}"
+      },
+      "agrees": true,
+      "notes": "`human-plus-tool-admission` G-35 records that an integral float digests as `1` in PHP and JavaScript and `1.0` in Python. A revision marker is compared as text and echoed back on every later call, so the same split here would mean two agents pinning the same surface state to two different strings — and a surface enforcing the pin would refuse one of them. Carried as raw text so the float survives into the test."
+    },
+    {
       "id": "hpc-0022",
       "title": "a FRACTIONAL revision is refused, because three languages cannot spell it alike",
       "since": "0.1.0",
@@ -356,22 +372,6 @@
       },
       "agrees": true,
       "notes": "The other end of the same boundary. Past 2^53-1 the three languages stop agreeing on what the number even is — JavaScript has no integer wider than a double, PHP casts to a platform int, Python does not — so a counter that grew that large would be pinned to three different strings. Refused everywhere, at the same threshold, spelled as a literal in all three rather than as each language's own MAX."
-    },
-    {
-      "id": "hpc-0021",
-      "title": "an integral float revision, which is the G-35 shape in a new family",
-      "since": "0.1.0",
-      "input": {
-        "result": "{\"_meta\":{\"revision\":1.0,\"changes\":[]}}",
-        "feed": "offered"
-      },
-      "rows": {
-        "php": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":true,\"attributes\":false,\"revision\":\"1\",\"changes\":[],\"defer_to\":[],\"handles\":[]}",
-        "ts": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":true,\"attributes\":false,\"revision\":\"1\",\"changes\":[],\"defer_to\":[],\"handles\":[]}",
-        "py": "{\"feed\":\"offered\",\"complete\":true,\"answered\":true,\"nothing_changed\":true,\"attributes\":false,\"revision\":\"1\",\"changes\":[],\"defer_to\":[],\"handles\":[]}"
-      },
-      "agrees": true,
-      "notes": "`human-plus-tool-admission` G-35 records that an integral float digests as `1` in PHP and JavaScript and `1.0` in Python. A revision marker is compared as text and echoed back on every later call, so the same split here would mean two agents pinning the same surface state to two different strings — and a surface enforcing the pin would refuse one of them. Carried as raw text so the float survives into the test."
     }
   ]
 }
