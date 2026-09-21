@@ -9,10 +9,13 @@ use Prism\HumanPlus\Contracts\RelayTransport;
 use Prism\HumanPlus\Data\Activity;
 use Prism\HumanPlus\Data\Participant;
 use Prism\HumanPlus\Data\SurfaceAttachment;
+use Prism\HumanPlus\Data\SurfaceChange;
+use Prism\HumanPlus\Data\SurfaceChanges;
 use Prism\HumanPlus\Data\SurfaceInvitation;
 use Prism\HumanPlus\Data\SurfaceRevision;
 use Prism\HumanPlus\Data\ToolDefinition;
 use Prism\HumanPlus\Enums\AttachmentState;
+use Prism\HumanPlus\Enums\ChangeActor;
 use Prism\HumanPlus\Enums\ConflictDetection;
 use Prism\HumanPlus\Exceptions\AttachmentUnauthorized;
 use Prism\HumanPlus\Exceptions\ConflictDetectionUnavailable;
@@ -28,6 +31,16 @@ use Prism\HumanPlus\Transport\LegacyMcpClient;
 
 final class HumanPlusManager
 {
+    /**
+     * The tool names a surface may offer a change feed under.
+     *
+     * Several, because this half of the wire is the surface's — the same reason
+     * {@see SurfaceRevision::fromResult()} accepts several key names. Matched
+     * case-insensitively and nothing else: a tool that merely looks like a feed
+     * is not called speculatively.
+     */
+    private const CHANGE_FEED_TOOLS = ['changes_since', 'changessince', 'surface_changes', 'surfacechanges', 'what_changed', 'whatchanged', 'changes'];
+
     private readonly LegacyMcpClient $client;
 
     public function __construct(
@@ -75,6 +88,201 @@ final class HumanPlusManager
     public function conflictDetection(string|object $owner, string $id): ConflictDetection
     {
         return $this->store->lock($id, fn (): ConflictDetection => $this->required($owner, $id)->conflictDetection);
+    }
+
+    /**
+     * What changed on this surface since the marker the agent last saw.
+     *
+     * ## Why this exists, in one sentence
+     *
+     * {@see SurfaceRevision} stops an agent overwriting a change it did not
+     * know about. It does NOTHING about an agent that re-reads, sees current
+     * state, decides the surface has drifted from what it intended, and puts it
+     * back — over a person's edit, with nothing stale anywhere and no error at
+     * any layer. Optimistic concurrency answers "did the world move under me";
+     * this answers "what did somebody else do", which is the question that
+     * stops the revert.
+     *
+     * ## What this package does and does not do here
+     *
+     * It carries. The marker goes out, the surface decides what changed since
+     * it, and the answer comes back as handles, kinds and actors. No diffing,
+     * no merge, no model of what a screen is — the same contract
+     * {@see SurfaceRevision} keeps, for the same reason: the comparison belongs
+     * where the knowledge is.
+     *
+     * ## The empty answer
+     *
+     * **Read {@see SurfaceChanges::answered()} before reading the list.** A
+     * surface with no feed and a surface with nothing to report produce the
+     * same empty array, and this package has already shipped one check that
+     * could not tell "no" from "cannot say" — see {@see ConflictDetection}.
+     * {@see SurfaceChanges::nothingChanged()} is the only method that means
+     * what an empty list looks like it means.
+     */
+    public function changesSince(string|object $owner, string $id): SurfaceChanges
+    {
+        return $this->store->lock($id, function () use ($owner, $id): SurfaceChanges {
+            $this->trust->assertDeclared();
+            $attachment = $this->required($owner, $id);
+
+            $feedTool = null;
+            foreach ($this->discover($attachment) as $candidate) {
+                if (in_array(strtolower($candidate->name), self::CHANGE_FEED_TOOLS, true)) {
+                    $feedTool = $candidate;
+                    break;
+                }
+            }
+
+            if (! $feedTool instanceof ToolDefinition) {
+                // Recorded, not just returned. A later turn asking again should
+                // not have to re-derive that this surface cannot answer, and an
+                // operator should be able to see it on the attachment.
+                $next = $attachment->observingChangeFeed(false);
+                if ($next !== $attachment) {
+                    $this->store->put($next, $attachment->generation);
+                }
+
+                return SurfaceChanges::unavailable();
+            }
+
+            $attachment = $attachment->observingChangeFeed(true);
+            $pinned = $attachment->revision;
+
+            try {
+                $result = $this->client->call(
+                    $attachment,
+                    $feedTool->name,
+                    $pinned instanceof SurfaceRevision ? ['since' => $pinned->token] : [],
+                    $pinned,
+                );
+            } catch (SurfaceUnavailable $failure) {
+                $this->store->put($attachment->transition(AttachmentState::SurfaceUnavailable), $attachment->generation);
+                throw $failure;
+            } catch (AttachmentUnauthorized $failure) {
+                $this->store->put($attachment->transition(AttachmentState::Unauthorized), $attachment->generation);
+                throw $failure;
+            } catch (SurfaceRevisionRejected) {
+                // The READ was refused for carrying a stale marker. Drop it and
+                // say the question went unanswered, exactly as `call()` does:
+                // an agent left holding a stale token cannot refresh it, because
+                // the refresh is the call being refused.
+                $this->store->put($attachment->observingEnforcement(), $attachment->generation);
+
+                throw SurfaceChangedUnderYou::while($feedTool->name, $pinned);
+            }
+
+            $changes = [];
+            $attributed = false;
+
+            foreach (self::changeRows($result) as $row) {
+                $change = SurfaceChange::from($row);
+                if (! $change instanceof SurfaceChange) {
+                    continue;
+                }
+                // The surface's own words, guarded like any other text coming
+                // back from a running application.
+                $changes[] = $change->label === ''
+                    ? $change
+                    : new SurfaceChange(
+                        $change->handle,
+                        $change->kind,
+                        $change->actor,
+                        $this->guard->guard($attachment->invitation->surfaceId, $feedTool->name, $change->label),
+                    );
+
+                // Proof arrives only when the surface names a hand that is NOT
+                // this agent's. A feed that can only ever say "agent" has not
+                // shown it can tell a person's edit from its own, which is the
+                // capability being claimed. Evidence when it arrives, never a
+                // precondition — the same rule as ConflictDetection::Enforced.
+                if ($change->actor === ChangeActor::Human || $change->actor === ChangeActor::Other) {
+                    $attributed = true;
+                }
+            }
+
+            $observed = SurfaceRevision::fromResult($result, $feedTool->name);
+            $attachment = $observed instanceof SurfaceRevision
+                ? $attachment->withRevision($observed)
+                : $attachment;
+
+            if ($attributed) {
+                $attachment = $attachment->observingAttribution();
+            }
+
+            $this->store->put($attachment, $attachment->generation);
+
+            return new SurfaceChanges(
+                $attachment->changeFeed,
+                $changes,
+                $attachment->revision,
+                self::claimsComplete($result),
+            );
+        });
+    }
+
+    /**
+     * The rows of changes in whatever shape the surface returned them.
+     *
+     * `_meta` first, then the top level, the same order
+     * {@see SurfaceRevision::fromResult()} looks in and for the same reason:
+     * MCP puts implementation data there.
+     *
+     * @param  array<string, mixed>  $result
+     * @return list<array<string, mixed>>
+     */
+    private static function changeRows(array $result): array
+    {
+        /** @var array<string, mixed> $meta */
+        $meta = is_array($result['_meta'] ?? null) ? $result['_meta'] : [];
+
+        foreach (['changes', 'change_log', 'changeLog', 'events', 'screens', 'items'] as $key) {
+            foreach ([$meta, $result] as $source) {
+                $value = $source[$key] ?? null;
+                if (is_array($value) && array_is_list($value)) {
+                    return array_values(array_filter($value, is_array(...)));
+                }
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * Did the surface claim this answer covers everything?
+     *
+     * **Complete unless it says otherwise.** The opposite default would mark
+     * every existing surface's answers partial for having never heard of the
+     * flag, which is a warning nobody can act on and everybody learns to skip.
+     *
+     * A surface that knows its feed has a hole — the first one asked hard-deletes
+     * rows with no tombstone, so a removal is invisible to it — can say so, and
+     * that admission reaches the caller intact.
+     *
+     * @param  array<string, mixed>  $result
+     */
+    private static function claimsComplete(array $result): bool
+    {
+        /** @var array<string, mixed> $meta */
+        $meta = is_array($result['_meta'] ?? null) ? $result['_meta'] : [];
+
+        foreach (['complete', 'is_complete', 'isComplete'] as $key) {
+            foreach ([$meta, $result] as $source) {
+                if (array_key_exists($key, $source)) {
+                    return (bool) $source[$key];
+                }
+            }
+        }
+
+        foreach (['partial', 'is_partial', 'isPartial', 'truncated'] as $key) {
+            foreach ([$meta, $result] as $source) {
+                if (array_key_exists($key, $source)) {
+                    return ! (bool) $source[$key];
+                }
+            }
+        }
+
+        return true;
     }
 
     public function attach(string|object $owner, SurfaceInvitation $invitation, Participant $participant): SurfaceAttachment

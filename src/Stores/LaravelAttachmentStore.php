@@ -14,6 +14,7 @@ use Prism\HumanPlus\Data\SurfaceAttachment;
 use Prism\HumanPlus\Data\SurfaceInvitation;
 use Prism\HumanPlus\Data\SurfaceRevision;
 use Prism\HumanPlus\Enums\AttachmentState;
+use Prism\HumanPlus\Enums\ChangeFeed;
 use Prism\HumanPlus\Enums\ConflictDetection;
 use Prism\HumanPlus\Exceptions\HumanPlusException;
 
@@ -60,6 +61,9 @@ final readonly class LaravelAttachmentStore implements AttachmentStore
             // the correct reading of that: not "this surface has none", but
             // "nobody has looked yet" — which is what a fresh attachment says.
             ConflictDetection::tryFrom((string) ($value['conflict_detection'] ?? '')) ?? ConflictDetection::NotObserved,
+            // Same reading for the same reason: absent means nobody has looked,
+            // never "this surface has no feed".
+            ChangeFeed::tryFrom((string) ($value['change_feed'] ?? '')) ?? ChangeFeed::NotObserved,
         );
     }
 
@@ -78,6 +82,7 @@ final readonly class LaravelAttachmentStore implements AttachmentStore
             'generation' => $attachment->generation, 'state' => $attachment->state->value,
             'revision' => $attachment->revision?->toArray(),
             'conflict_detection' => $attachment->conflictDetection->value,
+            'change_feed' => $attachment->changeFeed->value,
         ];
         $json = json_encode($value, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
         $this->cache->store($this->store)->put($this->prefix.$attachment->id, $this->encrypter->encrypt($json, serialize: false), $this->ttlSeconds);

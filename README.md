@@ -197,6 +197,129 @@ query string because browser `EventSource` cannot set an Authorization header.
 Use redacted proxy/access logs and never emit relay URLs to telemetry. Relays
 that support header authentication can opt into `authMode: 'bearer'`.
 
+
+## What changed since my last turn
+
+**A revision stops an agent overwriting a change it did not know about. It does
+nothing about an agent that knows exactly what it is doing and is wrong.**
+
+The first outside consumer predicted this one before writing any adoption code,
+and the prediction is worth stating in their terms: the first real two-writer
+bug will not look like a conflict. It will be the agent re-reading a surface,
+deciding it has drifted from what the agent intended, and putting it back — over
+a person's edit, in one turn, with no error anywhere. Nothing is stale, so the
+pin matches and the write lands.
+
+Optimistic concurrency answers *did the world move under me*. This answers *what
+did somebody else do*, which is the question that stops the revert.
+
+```php
+$changes = $humanPlus->changesSince($owner, $attachmentId);
+
+if (! $changes->answered()) {
+    // The surface has no feed. An empty list here is not evidence of quiet.
+}
+
+foreach ($changes->deferTo() as $change) {
+    // A handle this agent should re-read rather than correct.
+    $change->handle;   // the surface's own id
+    $change->kind;     // created | updated | deleted | moved | unknown
+    $change->actor;    // human | agent | other | unknown
+}
+```
+
+### The empty answer is the dangerous value
+
+"Nothing changed since your marker" and "I cannot answer that question" are the
+same empty array on the wire. Returning a bare list would make them
+indistinguishable, and an agent that reads silence as calm is the agent this
+whole feature exists to stop.
+
+So the feed state comes first, and `nothingChanged()` is the only method that
+means what an empty list looks like it means:
+
+| `ChangeFeed` | What is known |
+|---|---|
+| `NotObserved` | The surface has not listed its tools yet. |
+| `Unavailable` | It offers no feed. **"What changed" is unanswerable here.** |
+| `Offered` | A feed exists. Whether it can name WHO is not yet observable. |
+| `Attributed` | It has named a hand other than this agent's. Proven, because it happened. |
+
+This package shipped the other version of this once. `conflictDetection()` was a
+boolean that answered "does this surface mint revisions" while its documentation
+claimed a lost update would be caught — different questions, and the first
+integrator satisfied the cheap one. The states now say only what was seen, and
+`Attributed` is evidence when it arrives, never a precondition: a surface nobody
+else is editing legitimately never reports a human change and is
+indistinguishable from one that cannot report it.
+
+### Attribution is the load-bearing field
+
+"What changed" without "who" does not stop the revert. A list of moved handles
+includes the agent's own last write and looks identical to a person's.
+
+A change is deferred to **unless the surface positively said this agent made
+it**. One rule, and it lands correctly in both worlds: a surface that cannot
+attribute reports everything as `unknown`, so everything is deferred to — not
+because it is all a person's, but because none of it can be shown to be the
+agent's own, and undoing a person's work is the expensive mistake. A surface
+that can attribute gets its answer used.
+
+**A surface where every write path is an agent tool cannot attribute anything**,
+and that is not hypothetical: it is what the first surface asked reported about
+itself. On such a surface an agent gains "these handles moved, re-read them" and
+does not gain "leave this one alone" — which is a smaller thing honestly
+delivered rather than a larger thing faked.
+
+### A surface may admit its answer is partial
+
+`complete` is true unless the surface says otherwise. The opposite default would
+mark every existing surface's answers partial for having never heard of the
+flag — a warning nobody can act on and everybody learns to skip.
+
+It exists because feeds have holes their authors know about. The first surface
+asked hard-deletes rows with no tombstone, so a removal moves no revision and
+appears in no feed: "nothing changed" is what it says when a screen was
+destroyed. A package cannot detect that from outside. It can let the surface say
+so, and refuse to call the answer calm.
+
+### The surface's half
+
+A tool named any of `changes_since`, `surface_changes`, `what_changed` or
+`changes`, taking `since` and answering with rows under `changes` (in `_meta` or
+at the top level):
+
+```json
+{
+  "_meta": {
+    "revision": "r42",
+    "complete": true,
+    "changes": [
+      { "screen_id": "screen_7", "change": "moved", "actor_type": "human", "kind": "chart" }
+    ]
+  }
+}
+```
+
+`handle` is read from `handle`, `id`, `screen_id`, `node_id` or `key`; the
+change from `change`, `event`, `action` or `op`; the actor from `actor_type`,
+`actor`, `by` or `changed_by`. Several spellings per field, because this half of
+the wire is the surface's and refusing four shapes of five would make every new
+surface a code change here.
+
+**Send `change` even when you also send `kind`.** A surface that uses `kind` for
+a component type — "chart", "table" — and `change` for what happened is the
+shape already in the wild. The change keys are read first and `kind` is only
+consulted when none is present, so sending both is correct; sending only a
+component `kind` would have it read as an event type and land on `unknown`.
+
+An actor this package does not recognise is `unknown`, never a default. A
+surface that says `"actor": "operator"` means something, and quietly deciding it
+means `agent` would be the revert bug arriving through the parser. An
+`actor_id`, if you send one, is **not consumed** — `actor_type` is enough to
+decide deference, and carrying a person's identity through a package that does
+not need it is how PII ends up somewhere nobody meant it to be.
+
 ## Two writers
 
 **A human editing the same surface as the agent used to lose their work in

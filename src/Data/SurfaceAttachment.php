@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Prism\HumanPlus\Data;
 
 use Prism\HumanPlus\Enums\AttachmentState;
+use Prism\HumanPlus\Enums\ChangeFeed;
 use Prism\HumanPlus\Enums\ConflictDetection;
 
 final readonly class SurfaceAttachment
@@ -39,13 +40,23 @@ final readonly class SurfaceAttachment
          * PROTECTION. {@see ConflictDetection} has the finding.
          */
         public ConflictDetection $conflictDetection = ConflictDetection::NotObserved,
+        /**
+         * What this surface has been seen able to say about WHO changed what.
+         *
+         * Stored beside {@see $conflictDetection} and for the same reason: the
+         * agent that reads and the agent that writes are often different queue
+         * workers, so a verdict held in memory would be re-learned from nothing
+         * on every request — and "not observed" would be indistinguishable from
+         * "asked and told no".
+         */
+        public ChangeFeed $changeFeed = ChangeFeed::NotObserved,
     ) {}
 
     public function transition(AttachmentState $state): self
     {
         return new self(
             $this->id, $this->owner, $this->invitation, $this->participant, $this->clientId,
-            $this->generation + 1, $state, $this->revision, $this->conflictDetection,
+            $this->generation + 1, $state, $this->revision, $this->conflictDetection, $this->changeFeed,
         );
     }
 
@@ -71,7 +82,7 @@ final readonly class SurfaceAttachment
 
         return new self(
             $this->id, $this->owner, $this->invitation, $this->participant, $this->clientId,
-            $this->generation, $this->state, $revision, $detection,
+            $this->generation, $this->state, $revision, $detection, $this->changeFeed,
         );
     }
 
@@ -87,7 +98,7 @@ final readonly class SurfaceAttachment
     {
         return new self(
             $this->id, $this->owner, $this->invitation, $this->participant, $this->clientId,
-            $this->generation, $this->state, null, ConflictDetection::Enforced,
+            $this->generation, $this->state, null, ConflictDetection::Enforced, $this->changeFeed,
         );
     }
 
@@ -107,7 +118,7 @@ final readonly class SurfaceAttachment
 
         return new self(
             $this->id, $this->owner, $this->invitation, $this->participant, $this->clientId,
-            $this->generation, $this->state, $this->revision, ConflictDetection::Unavailable,
+            $this->generation, $this->state, $this->revision, ConflictDetection::Unavailable, $this->changeFeed,
         );
     }
 
@@ -125,7 +136,53 @@ final readonly class SurfaceAttachment
     {
         return new self(
             $this->id, $this->owner, $this->invitation, $this->participant, $this->clientId,
-            $this->generation, $this->state, null, $this->conflictDetection,
+            $this->generation, $this->state, null, $this->conflictDetection, $this->changeFeed,
+        );
+    }
+
+    /**
+     * Record what the surface's tool list said about a change feed.
+     *
+     * Only ever moves NotObserved in one direction, and never downgrades a
+     * proven Attributed — the same discipline {@see observingNoRevision()}
+     * keeps. A surface that offered a feed and then listed a shorter set of
+     * tools has not stopped being able to attribute what it already attributed.
+     */
+    public function observingChangeFeed(bool $offered): self
+    {
+        if ($this->changeFeed === ChangeFeed::Attributed) {
+            return $this;
+        }
+
+        $feed = $offered ? ChangeFeed::Offered : ChangeFeed::Unavailable;
+
+        if ($feed === $this->changeFeed) {
+            return $this;
+        }
+
+        return new self(
+            $this->id, $this->owner, $this->invitation, $this->participant, $this->clientId,
+            $this->generation, $this->state, $this->revision, $this->conflictDetection, $feed,
+        );
+    }
+
+    /**
+     * Record that the surface actually named someone who is not this agent.
+     *
+     * The only positive proof that a feed can attribute, and it is permanent
+     * for the same reason {@see observingEnforcement()} is: it happened. A
+     * surface that can name a person once can name one again, and a later turn
+     * where only the agent wrote proves nothing either way.
+     */
+    public function observingAttribution(): self
+    {
+        if ($this->changeFeed === ChangeFeed::Attributed) {
+            return $this;
+        }
+
+        return new self(
+            $this->id, $this->owner, $this->invitation, $this->participant, $this->clientId,
+            $this->generation, $this->state, $this->revision, $this->conflictDetection, ChangeFeed::Attributed,
         );
     }
 }
