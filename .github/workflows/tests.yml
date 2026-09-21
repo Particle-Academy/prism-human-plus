@@ -8,6 +8,7 @@ permissions:
 jobs:
   php:
     runs-on: ${{ matrix.os }}
+    needs: third-party
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
