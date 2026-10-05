@@ -26,8 +26,50 @@ proving the tag was tested, and proving the package actually became installable.
    release step rather than publishing an empty release. If a version is worth
    cutting, it is worth a sentence saying why.
 
-   Say what breaks, what it fixes, and what a consumer has to do. Anyone holding
-   a pinned digest or matching on an error code learns it here or not at all.
+   **Every annotation must declare its breaking status**, and the release
+   refuses one that does not. Write one of these two lines, whichever is true:
+
+   ```
+   BREAKING CHANGE: <what breaks, and what the consumer must do about it>
+   ```
+
+   ```
+   No breaking changes.
+   ```
+
+   A `## Breaking changes` heading with content under it also satisfies the
+   check, but **only if you tag with `--cleanup=verbatim` or `-F`**. Under git's
+   default cleanup every `#` line in a tag message is treated as a comment and
+   **deleted**, so `git tag -a -m '## Breaking changes …'` publishes an
+   annotation with the heading silently missing. The two forms above carry no
+   `#` to lose, which is why they come first.
+
+   This was asked for in prose before this check existed, and asking did not
+   work: of the twenty most recent annotations across ten of these repositories,
+   EIGHTEEN never used the word "breaking" at all. One shipped a mandatory
+   migration, a changed scope-matching rule and a raised framework floor under
+   headings that described each change accurately and labelled none of them
+   breaking. A consumer scanning that release page for the word found nothing.
+
+   Prose mentioning "breaking" does not satisfy the check — it matches the
+   structural form, so a note that merely discusses breakage still has to say
+   which it is. Anyone holding a pinned digest or matching on an error code
+   learns it here or not at all.
+
+   **Check it before you push the tag.** Packagist mirrors the version the
+   moment the tag exists, so the CI guard can only withhold the GitHub release —
+   this is the only point at which refusing still prevents a publish:
+
+   ```
+   git tag -a v0.2.0                             # write the message
+   sh tools/check-release-notes.sh --tag v0.2.0  # must pass
+   git push origin v0.2.0                        # only then
+   ```
+
+   Use `--tag`, not a pipe from `git tag -l --format='%(contents)'`: on a
+   lightweight tag that format yields the *commit* message instead, so the check
+   would read text the release will never publish and approve it. `--tag`
+   refuses that case by name.
 
 Composer takes the version from the tag, so there is nothing to bump in
 `composer.json` — and a `version` key there is refused, because it reintroduces

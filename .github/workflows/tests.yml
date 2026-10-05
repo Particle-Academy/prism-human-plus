@@ -65,3 +65,49 @@ jobs:
         run: |
           node .third-party-allowlist/third-party/check.mjs --repo .
           node -e "require('node:fs').rmSync('.third-party-allowlist',{recursive:true,force:true})"
+
+  release-notes:
+    name: Release-notes check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # tools/check-release-notes.sh refuses a tag annotation that does not say
+      # whether the release breaks anything. It runs in publish.yml's guard, and
+      # a release manager runs it by hand before tagging.
+      #
+      # It is tested HERE because a guard nobody tried to defeat is the recurring
+      # way one of these ends up checking nothing. The suite asserts both
+      # directions, and its sharpest case is a note that discusses breakage in
+      # prose while declaring nothing: a plain `grep -i breaking` passes that, and
+      # three real annotations in this estate are exactly that shape.
+      - name: tools/check-release-notes.sh must refuse what it claims to
+        run: sh tools/check-release-notes.test.sh
+
+      # The checker is vendored rather than fetched, because for a Composer
+      # package the pre-tag run is the only control that can prevent publication
+      # and it has to work from the tree being tagged, offline, without piping a
+      # remote script into a shell. That buys a copy, and an unchecked copy is one
+      # that has already drifted without telling anyone -- prism-parity found 38
+      # of 111 hand-maintained copies stale. So it is diffed, not trusted.
+      - name: Fetch the canonical checker
+        uses: actions/checkout@v4
+        with:
+          repository: Particle-Academy/.github
+          path: .canonical
+          persist-credentials: false
+
+      - name: The vendored checker must match the canonical one
+        run: |
+          for pair in check.sh:check-release-notes.sh check.test.sh:check-release-notes.test.sh; do
+            diff -u ".canonical/release-notes/${pair%%:*}" "tools/${pair##*:}" || {
+              echo "::error::tools/${pair##*:} has drifted from Particle-Academy/.github release-notes/${pair%%:*}. Change the canonical file and re-vendor it; do not patch the copy."
+              exit 1
+            }
+          done
+          echo "Both vendored files match the canonical checker."
+          rm -rf .canonical
