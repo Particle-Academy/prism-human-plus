@@ -89,7 +89,7 @@ function admitFromCorpus(array $case): array
 }
 
 it('is the whole suite, not a subset someone trimmed to green', function (): void {
-    expect(toolAdmissionCorpus())->toHaveCount(32);
+    expect(toolAdmissionCorpus())->toHaveCount(45);
 });
 
 it('still decides each case the way the corpus recorded', function (array $case): void {
