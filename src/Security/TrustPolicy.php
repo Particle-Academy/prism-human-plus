@@ -144,6 +144,26 @@ final readonly class TrustPolicy
             return true;
         }
 
-        return preg_match('/(?:^|_)(?:confirm|reject|accept|approve|deny)$/i', $normalised) === 1;
+        // TOKENISED, not an end-anchored pattern (G-130). The well-formed check
+        // admits `.`, `:` and `-` as well as `_`, and a surface chooses its own
+        // names, so reserving the verb only behind `_` handed `terminal.confirm`,
+        // `sheet:approve`, `confirm_edit` and `sheetConfirm` to the agent. Every
+        // separator and every camelCase boundary splits a token; the name is
+        // reserved when ANY token is a reserved verb. Whole tokens only, so
+        // `send_confirmation_email` and `denylist` stay callable. Spelled the
+        // same way in all three languages, and like the normalisation above it
+        // can only ever reserve more.
+        foreach (preg_split('/[_.:-]+/', $normalised) ?: [] as $segment) {
+            foreach (preg_split('/(?<=[a-z0-9])(?=[A-Z])/', $segment) ?: [] as $token) {
+                if (in_array(strtolower($token), self::RESERVED_VERBS, true)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
+
+    /** Verbs whose tools belong to the human confirmation surface. */
+    private const RESERVED_VERBS = ['confirm', 'reject', 'accept', 'approve', 'deny'];
 }

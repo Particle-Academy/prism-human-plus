@@ -1,7 +1,7 @@
 {
     "suite": "human-plus-tool-admission",
     "schema_version": 1,
-    "corpus_version": "0.1.0",
+    "corpus_version": "0.2.0",
     "generated_by": "prism-parity:tools/generate-tool-admission.php for php; the ports' own runners for ts and py. Every row is execution output from the real TrustPolicy and ToolDefinition -- a hand-authored verdict would assert the author's model of a regex rather than the regex.",
     "scope": "Whether a surface-declared tool is ADMITTED, and the digest its pin is compared against. The relay, the attachment store and the result guard are not covered here.",
     "encoding": "`input_schema_json` is the schema as RAW JSON TEXT, parsed by each language itself. It is NOT a decoded object, and that is load-bearing: an authored `{}` survives a PHP round-trip as `[]` and an authored `1.0` as `1`, so a decoded corpus would have silently replaced the two inputs whose rows exist to test them -- and all three languages would then have agreed, on the wrong input. Same reason json-container-identity carries its 2^53 values as raw strings. Text is also what the wire actually carries: a surface sends JSON, each language parses it natively, and the digests have to match anyway.",
@@ -1316,6 +1316,528 @@
                 },
                 "py": {
                     "digest": "sha256:b6f9504f79e44e68f9215b5eac498fa6",
+                    "declared": true,
+                    "allows": true,
+                    "admitted": true,
+                    "message": null
+                }
+            },
+            "agrees": true,
+            "disagrees_on": []
+        },
+        {
+            "id": "adm-0033",
+            "title": "a confirmation tool namespaced with a DOT, under wildcard trust",
+            "since": "0.2.0",
+            "tool": {
+                "name": "terminal.confirm",
+                "description": "A tool.",
+                "input_schema_json": "{\"type\":\"object\"}"
+            },
+            "policy": {
+                "mode": "everyTool",
+                "tools": []
+            },
+            "notes": "G-130. The well-formed check admits `.`, so a surface could spell its confirmation tool `terminal.confirm` -- and the reservation, which looked for the verb only behind `_`, did not fire in ANY language. Wildcard trust then handed the human's confirmation tool to the agent. Reserved.",
+            "admission": {
+                "php": {
+                    "digest": "sha256:9056bceda19c8c9a6084637c32c75f8c",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [terminal.confirm] is reserved for the human confirmation surface."
+                },
+                "ts": {
+                    "digest": "sha256:9056bceda19c8c9a6084637c32c75f8c",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [terminal.confirm] is reserved for the human confirmation surface."
+                },
+                "py": {
+                    "digest": "sha256:9056bceda19c8c9a6084637c32c75f8c",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [terminal.confirm] is reserved for the human confirmation surface."
+                }
+            },
+            "agrees": true,
+            "disagrees_on": []
+        },
+        {
+            "id": "adm-0034",
+            "title": "a confirmation verb behind a COLON",
+            "since": "0.2.0",
+            "tool": {
+                "name": "sheet:approve",
+                "description": "A tool.",
+                "input_schema_json": "{\"type\":\"object\"}"
+            },
+            "policy": {
+                "mode": "everyTool",
+                "tools": []
+            },
+            "notes": "G-130, same hole by `:`. Reserved.",
+            "admission": {
+                "php": {
+                    "digest": "sha256:515aed5e023352b385a861825d3d998e",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [sheet:approve] is reserved for the human confirmation surface."
+                },
+                "ts": {
+                    "digest": "sha256:515aed5e023352b385a861825d3d998e",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [sheet:approve] is reserved for the human confirmation surface."
+                },
+                "py": {
+                    "digest": "sha256:515aed5e023352b385a861825d3d998e",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [sheet:approve] is reserved for the human confirmation surface."
+                }
+            },
+            "agrees": true,
+            "disagrees_on": []
+        },
+        {
+            "id": "adm-0035",
+            "title": "a confirmation verb behind a HYPHEN",
+            "since": "0.2.0",
+            "tool": {
+                "name": "edit-deny",
+                "description": "A tool.",
+                "input_schema_json": "{\"type\":\"object\"}"
+            },
+            "policy": {
+                "mode": "everyTool",
+                "tools": []
+            },
+            "notes": "G-130, same hole by `-`. Reserved.",
+            "admission": {
+                "php": {
+                    "digest": "sha256:7ba0f20ce240c2479b4f2c065421e86a",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [edit-deny] is reserved for the human confirmation surface."
+                },
+                "ts": {
+                    "digest": "sha256:7ba0f20ce240c2479b4f2c065421e86a",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [edit-deny] is reserved for the human confirmation surface."
+                },
+                "py": {
+                    "digest": "sha256:7ba0f20ce240c2479b4f2c065421e86a",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [edit-deny] is reserved for the human confirmation surface."
+                }
+            },
+            "agrees": true,
+            "disagrees_on": []
+        },
+        {
+            "id": "adm-0036",
+            "title": "a confirmation verb as a PREFIX",
+            "since": "0.2.0",
+            "tool": {
+                "name": "confirm_edit",
+                "description": "A tool.",
+                "input_schema_json": "{\"type\":\"object\"}"
+            },
+            "policy": {
+                "mode": "everyTool",
+                "tools": []
+            },
+            "notes": "G-130. The verb need not be last: a tool named for confirming is a confirmation tool wherever the verb sits. Reserved.",
+            "admission": {
+                "php": {
+                    "digest": "sha256:90e005b8756d04ef740cf37b11db3996",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [confirm_edit] is reserved for the human confirmation surface."
+                },
+                "ts": {
+                    "digest": "sha256:90e005b8756d04ef740cf37b11db3996",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [confirm_edit] is reserved for the human confirmation surface."
+                },
+                "py": {
+                    "digest": "sha256:90e005b8756d04ef740cf37b11db3996",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [confirm_edit] is reserved for the human confirmation surface."
+                }
+            },
+            "agrees": true,
+            "disagrees_on": []
+        },
+        {
+            "id": "adm-0037",
+            "title": "a confirmation verb in the MIDDLE of a namespaced name",
+            "since": "0.2.0",
+            "tool": {
+                "name": "vendor.deny.all",
+                "description": "A tool.",
+                "input_schema_json": "{\"type\":\"object\"}"
+            },
+            "policy": {
+                "mode": "everyTool",
+                "tools": []
+            },
+            "notes": "G-130. Infix, behind and before a dot. Reserved.",
+            "admission": {
+                "php": {
+                    "digest": "sha256:518d837c8408691ea2366ba2512111fc",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [vendor.deny.all] is reserved for the human confirmation surface."
+                },
+                "ts": {
+                    "digest": "sha256:518d837c8408691ea2366ba2512111fc",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [vendor.deny.all] is reserved for the human confirmation surface."
+                },
+                "py": {
+                    "digest": "sha256:518d837c8408691ea2366ba2512111fc",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [vendor.deny.all] is reserved for the human confirmation surface."
+                }
+            },
+            "agrees": true,
+            "disagrees_on": []
+        },
+        {
+            "id": "adm-0038",
+            "title": "a dotted confirmation name in mixed case",
+            "since": "0.2.0",
+            "tool": {
+                "name": "Terminal.Confirm",
+                "description": "A tool.",
+                "input_schema_json": "{\"type\":\"object\"}"
+            },
+            "policy": {
+                "mode": "everyTool",
+                "tools": []
+            },
+            "notes": "G-130. Case-insensitive, and the separator is a dot. Reserved.",
+            "admission": {
+                "php": {
+                    "digest": "sha256:a610f1f50686e85351cd72a764addcfb",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [Terminal.Confirm] is reserved for the human confirmation surface."
+                },
+                "ts": {
+                    "digest": "sha256:a610f1f50686e85351cd72a764addcfb",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [Terminal.Confirm] is reserved for the human confirmation surface."
+                },
+                "py": {
+                    "digest": "sha256:a610f1f50686e85351cd72a764addcfb",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [Terminal.Confirm] is reserved for the human confirmation surface."
+                }
+            },
+            "agrees": true,
+            "disagrees_on": []
+        },
+        {
+            "id": "adm-0039",
+            "title": "a confirmation verb at a camelCase boundary",
+            "since": "0.2.0",
+            "tool": {
+                "name": "sheetConfirm",
+                "description": "A tool.",
+                "input_schema_json": "{\"type\":\"object\"}"
+            },
+            "policy": {
+                "mode": "everyTool",
+                "tools": []
+            },
+            "notes": "G-130. camelCase is a token boundary too, or a surface simply drops the separator. Reserved.",
+            "admission": {
+                "php": {
+                    "digest": "sha256:f59feea891aaef3458c3c9280df4799b",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [sheetConfirm] is reserved for the human confirmation surface."
+                },
+                "ts": {
+                    "digest": "sha256:f59feea891aaef3458c3c9280df4799b",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [sheetConfirm] is reserved for the human confirmation surface."
+                },
+                "py": {
+                    "digest": "sha256:f59feea891aaef3458c3c9280df4799b",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [sheetConfirm] is reserved for the human confirmation surface."
+                }
+            },
+            "agrees": true,
+            "disagrees_on": []
+        },
+        {
+            "id": "adm-0040",
+            "title": "a confirmation verb as a camelCase PREFIX",
+            "since": "0.2.0",
+            "tool": {
+                "name": "rejectChange",
+                "description": "A tool.",
+                "input_schema_json": "{\"type\":\"object\"}"
+            },
+            "policy": {
+                "mode": "everyTool",
+                "tools": []
+            },
+            "notes": "G-130. Reserved.",
+            "admission": {
+                "php": {
+                    "digest": "sha256:57b78f8990d04f75b91071b7d776b28f",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [rejectChange] is reserved for the human confirmation surface."
+                },
+                "ts": {
+                    "digest": "sha256:57b78f8990d04f75b91071b7d776b28f",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [rejectChange] is reserved for the human confirmation surface."
+                },
+                "py": {
+                    "digest": "sha256:57b78f8990d04f75b91071b7d776b28f",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [rejectChange] is reserved for the human confirmation surface."
+                }
+            },
+            "agrees": true,
+            "disagrees_on": []
+        },
+        {
+            "id": "adm-0041",
+            "title": "a camelCase verb after a digit",
+            "since": "0.2.0",
+            "tool": {
+                "name": "v2Reject",
+                "description": "A tool.",
+                "input_schema_json": "{\"type\":\"object\"}"
+            },
+            "policy": {
+                "mode": "everyTool",
+                "tools": []
+            },
+            "notes": "G-130. A digit before an uppercase letter is a boundary in all three spellings of the rule. Reserved.",
+            "admission": {
+                "php": {
+                    "digest": "sha256:9f68d51de394c85761d9c6583f09775c",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [v2Reject] is reserved for the human confirmation surface."
+                },
+                "ts": {
+                    "digest": "sha256:9f68d51de394c85761d9c6583f09775c",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [v2Reject] is reserved for the human confirmation surface."
+                },
+                "py": {
+                    "digest": "sha256:9f68d51de394c85761d9c6583f09775c",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [v2Reject] is reserved for the human confirmation surface."
+                }
+            },
+            "agrees": true,
+            "disagrees_on": []
+        },
+        {
+            "id": "adm-0042",
+            "title": "a dotted confirmation tool the ALLOWLIST names explicitly",
+            "since": "0.2.0",
+            "tool": {
+                "name": "terminal.confirm",
+                "description": "A tool.",
+                "input_schema_json": "{\"type\":\"object\"}"
+            },
+            "policy": {
+                "mode": "allowing",
+                "tools": [
+                    "terminal.confirm"
+                ]
+            },
+            "notes": "G-130. The reservation outranks the allowlist: naming a confirmation tool in trust config must not hand it to the agent. Reserved.",
+            "admission": {
+                "php": {
+                    "digest": "sha256:9056bceda19c8c9a6084637c32c75f8c",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [terminal.confirm] is reserved for the human confirmation surface."
+                },
+                "ts": {
+                    "digest": "sha256:9056bceda19c8c9a6084637c32c75f8c",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [terminal.confirm] is reserved for the human confirmation surface."
+                },
+                "py": {
+                    "digest": "sha256:9056bceda19c8c9a6084637c32c75f8c",
+                    "declared": true,
+                    "allows": false,
+                    "admitted": false,
+                    "message": "Human+ tool [terminal.confirm] is reserved for the human confirmation surface."
+                }
+            },
+            "agrees": true,
+            "disagrees_on": []
+        },
+        {
+            "id": "adm-0043",
+            "title": "a word that merely CONTAINS a verb stays callable",
+            "since": "0.2.0",
+            "tool": {
+                "name": "send_confirmation_email",
+                "description": "A tool.",
+                "input_schema_json": "{\"type\":\"object\"}"
+            },
+            "policy": {
+                "mode": "everyTool",
+                "tools": []
+            },
+            "notes": "The other direction. Whole tokens only: `confirmation` is not `confirm`, so a rule that reserved substrings would refuse ordinary tools and get switched off. Callable.",
+            "admission": {
+                "php": {
+                    "digest": "sha256:be3709ea4aeb55dabc5f1106e5319623",
+                    "declared": true,
+                    "allows": true,
+                    "admitted": true,
+                    "message": null
+                },
+                "ts": {
+                    "digest": "sha256:be3709ea4aeb55dabc5f1106e5319623",
+                    "declared": true,
+                    "allows": true,
+                    "admitted": true,
+                    "message": null
+                },
+                "py": {
+                    "digest": "sha256:be3709ea4aeb55dabc5f1106e5319623",
+                    "declared": true,
+                    "allows": true,
+                    "admitted": true,
+                    "message": null
+                }
+            },
+            "agrees": true,
+            "disagrees_on": []
+        },
+        {
+            "id": "adm-0044",
+            "title": "a compound word stays callable",
+            "since": "0.2.0",
+            "tool": {
+                "name": "denylist",
+                "description": "A tool.",
+                "input_schema_json": "{\"type\":\"object\"}"
+            },
+            "policy": {
+                "mode": "everyTool",
+                "tools": []
+            },
+            "notes": "Whole tokens only: `denylist` is one token. Callable.",
+            "admission": {
+                "php": {
+                    "digest": "sha256:fd95d7067e65c588a1e684a8d89d4e96",
+                    "declared": true,
+                    "allows": true,
+                    "admitted": true,
+                    "message": null
+                },
+                "ts": {
+                    "digest": "sha256:fd95d7067e65c588a1e684a8d89d4e96",
+                    "declared": true,
+                    "allows": true,
+                    "admitted": true,
+                    "message": null
+                },
+                "py": {
+                    "digest": "sha256:fd95d7067e65c588a1e684a8d89d4e96",
+                    "declared": true,
+                    "allows": true,
+                    "admitted": true,
+                    "message": null
+                }
+            },
+            "agrees": true,
+            "disagrees_on": []
+        },
+        {
+            "id": "adm-0045",
+            "title": "a verb inside a longer token stays callable",
+            "since": "0.2.0",
+            "tool": {
+                "name": "acceptance.report",
+                "description": "A tool.",
+                "input_schema_json": "{\"type\":\"object\"}"
+            },
+            "policy": {
+                "mode": "everyTool",
+                "tools": []
+            },
+            "notes": "Whole tokens only: `acceptance` is not `accept`. Callable.",
+            "admission": {
+                "php": {
+                    "digest": "sha256:72b9e846ee5592248d7d5472838bc57b",
+                    "declared": true,
+                    "allows": true,
+                    "admitted": true,
+                    "message": null
+                },
+                "ts": {
+                    "digest": "sha256:72b9e846ee5592248d7d5472838bc57b",
+                    "declared": true,
+                    "allows": true,
+                    "admitted": true,
+                    "message": null
+                },
+                "py": {
+                    "digest": "sha256:72b9e846ee5592248d7d5472838bc57b",
                     "declared": true,
                     "allows": true,
                     "admitted": true,
