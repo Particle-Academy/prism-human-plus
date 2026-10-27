@@ -39,7 +39,7 @@ final readonly class SsePostRelayTransport implements RelayTransport
      * @param  list<int>  $allowedRelayPorts
      */
     public function __construct(
-        private ClientInterface $http,
+        ClientInterface $http,
         array $allowedRelayHosts,
         private int $timeoutSeconds = 30,
         private int $maxFrameBytes = 262144,
