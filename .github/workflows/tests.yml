@@ -10,9 +10,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: third-party
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
         php: ['8.2', '8.3', '8.4']
+        dependencies: [highest, lowest]
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
@@ -20,7 +22,12 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: dom, curl, fileinfo, json, mbstring
           coverage: none
-      - run: composer update --prefer-dist --no-interaction
+      - name: Install highest supported dependencies
+        if: matrix.dependencies == 'highest'
+        run: composer update --prefer-dist --no-interaction
+      - name: Install lowest supported dependencies
+        if: matrix.dependencies == 'lowest'
+        run: composer update --prefer-lowest --prefer-stable --prefer-dist --no-interaction
       # NOTHING IN THIS ESTATE HAD EVER AUDITED A PHP DEPENDENCY. Where
       # composer.lock is gitignored -- correct for a library, since consumers
       # resolve their own -- Dependabot has no lock to scan, so it reported zero
@@ -35,6 +42,34 @@ jobs:
       - run: composer test
       - run: composer types
       - run: vendor/bin/pint --test
+
+  require-checker:
+    name: Declared dependencies, ${{ matrix.dependencies }}
+    runs-on: ubuntu-latest
+    needs: third-party
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        dependencies: [highest, lowest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: dom, curl, filter, fileinfo, json, mbstring
+          coverage: none
+          tools: composer-require-checker
+      - name: Install highest supported dependencies
+        if: matrix.dependencies == 'highest'
+        run: composer update --prefer-dist --no-interaction
+      - name: Install lowest supported dependencies
+        if: matrix.dependencies == 'lowest'
+        run: composer update --prefer-lowest --prefer-stable --prefer-dist --no-interaction
+      - name: Check declared dependencies match used symbols
+        run: composer-require-checker check composer.json
 
   third-party:
     name: Third-party dependency allowlist
@@ -58,7 +93,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Particle-Academy/.github
-          ref: b3b5e499c78467bd1e98d80af23a6b4861489ac5
+          ref: 1a1fad08a5fa685d5aca89e4bfa0b6afac7fa949
           path: .third-party-allowlist
           persist-credentials: false
 
@@ -85,11 +120,11 @@ jobs:
           DYLD_LIBRARY_PATH: ''
           PIN_ROOT: .third-party-allowlist
           PIN_DIR: .third-party-allowlist/third-party
-          PIN_SHA: b3b5e499c78467bd1e98d80af23a6b4861489ac5
+          PIN_SHA: 1a1fad08a5fa685d5aca89e4bfa0b6afac7fa949
           PIN_SHA256: |
             4b94acfac87136b0942123b9f227919d7e2e3d67863bcdceba32c9a73f765db0  check.mjs
             1547306d567749d7410040cae2bfb9a648902de95c3378f6c5af54245c896e11  gate-graph.mjs
-            b9423fcbc59c06b38862841f7111817cf586a3f5e7bcaf34349f26f7515b782d  allowlist.json
+            e5c6f925b2d5cab9e7bca220e8ad4d6bed809f5e2ab73cbefa9bb16d60bd2a86  allowlist.json
         run: |
           node -e '
           const fs = require("node:fs");
@@ -145,7 +180,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Particle-Academy/.github
-          ref: b3b5e499c78467bd1e98d80af23a6b4861489ac5
+          ref: 1a1fad08a5fa685d5aca89e4bfa0b6afac7fa949
           path: .canonical
           persist-credentials: false
 
@@ -172,11 +207,11 @@ jobs:
           DYLD_LIBRARY_PATH: ''
           PIN_ROOT: .canonical
           PIN_DIR: .canonical/third-party
-          PIN_SHA: b3b5e499c78467bd1e98d80af23a6b4861489ac5
+          PIN_SHA: 1a1fad08a5fa685d5aca89e4bfa0b6afac7fa949
           PIN_SHA256: |
             4b94acfac87136b0942123b9f227919d7e2e3d67863bcdceba32c9a73f765db0  check.mjs
             1547306d567749d7410040cae2bfb9a648902de95c3378f6c5af54245c896e11  gate-graph.mjs
-            b9423fcbc59c06b38862841f7111817cf586a3f5e7bcaf34349f26f7515b782d  allowlist.json
+            e5c6f925b2d5cab9e7bca220e8ad4d6bed809f5e2ab73cbefa9bb16d60bd2a86  allowlist.json
         run: |
           node -e '
           const fs = require("node:fs");
