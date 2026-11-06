@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.0
 
 - Preserve HTTP status-based failure categories across both relay transports.
 - Complete and validate the native concurrent POST before returning a correlated reply, with POST failures taking precedence over GET status.

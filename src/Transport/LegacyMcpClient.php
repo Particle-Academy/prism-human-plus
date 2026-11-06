@@ -29,7 +29,7 @@ final class LegacyMcpClient
         $response = $this->request($attachment, 'initialize', [
             'protocolVersion' => '2025-06-18',
             'capabilities' => (object) [],
-            'clientInfo' => ['name' => 'prism-human-plus', 'version' => '0.1.0'],
+            'clientInfo' => ['name' => 'prism-human-plus', 'version' => '0.6.0'],
         ]);
         $version = $response['protocolVersion'] ?? null;
         if ($version !== '2025-06-18') {
