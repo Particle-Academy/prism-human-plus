@@ -209,12 +209,16 @@ final readonly class RelayEndpoint
      */
     public function assertLive(ResponseInterface $response, bool $detach = false): void
     {
-        $status = $response->getStatusCode();
+        $this->assertStatus($response->getStatusCode(), $detach);
+    }
+
+    /** The HTTP status determines the category; untrusted body text cannot change it. */
+    public function assertStatus(int $status, bool $detach = false): void
+    {
         if ($status >= 200 && $status < 300) {
             return;
         }
-        $body = (string) $response->getBody();
-        if ($status === 410 || str_contains($body, 'session_gone')) {
+        if ($status === 410) {
             if ($detach) {
                 return;
             }
@@ -223,9 +227,6 @@ final readonly class RelayEndpoint
         if ($status === 401) {
             throw new AttachmentUnauthorized('The Fancy surface attachment is unauthorized.');
         }
-        // A relay that enforces the revision itself answers 409 rather than
-        // passing a JSON-RPC error back, so both routes have to be recognised or
-        // a correctly-protecting relay still loses updates through this client.
         if ($status === 409) {
             throw new SurfaceRevisionRejected('The Fancy relay rejected the revision this call was pinned to.');
         }
@@ -248,25 +249,24 @@ final readonly class RelayEndpoint
      */
     private function assertPublicHost(string $host): void
     {
-        if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
-            if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+        $bare = str_starts_with($host, '[') && str_ends_with($host, ']') ? substr($host, 1, -1) : $host;
+        if (filter_var($bare, FILTER_VALIDATE_IP) !== false) {
+            if (RelayAddressPolicy::isNonPublicAddress($bare)) {
                 throw new AttachmentUnauthorized('Human+ relay resolved to a private or reserved address.');
             }
 
             return;
         }
-
         if ($this->allowUnverifiedEgress) {
             return;
         }
-
-        $records = dns_get_record($host, DNS_A | DNS_AAAA);
+        $records = @dns_get_record($bare, DNS_A | DNS_AAAA);
         if ($records === false || $records === []) {
             throw new AttachmentUnauthorized('Human+ relay host did not resolve to a public address.');
         }
         foreach ($records as $record) {
             $address = $record['ip'] ?? $record['ipv6'] ?? null;
-            if (! is_string($address) || filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+            if (! is_string($address) || RelayAddressPolicy::isNonPublicAddress($address)) {
                 throw new AttachmentUnauthorized('Human+ relay resolved to a private or reserved address.');
             }
         }

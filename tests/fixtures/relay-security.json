@@ -1,0 +1,1164 @@
+{
+  "schemaVersion": 1,
+  "statusRows": [
+    {
+      "id": "post-200-body0",
+      "operation": "post",
+      "status": 200,
+      "body": "plain",
+      "expected": "success"
+    },
+    {
+      "id": "post-200-body1",
+      "operation": "post",
+      "status": 200,
+      "body": "session_gone",
+      "expected": "success"
+    },
+    {
+      "id": "post-200-body2",
+      "operation": "post",
+      "status": 200,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "success"
+    },
+    {
+      "id": "post-204-body0",
+      "operation": "post",
+      "status": 204,
+      "body": "plain",
+      "expected": "success"
+    },
+    {
+      "id": "post-204-body1",
+      "operation": "post",
+      "status": 204,
+      "body": "session_gone",
+      "expected": "success"
+    },
+    {
+      "id": "post-204-body2",
+      "operation": "post",
+      "status": 204,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "success"
+    },
+    {
+      "id": "post-401-body0",
+      "operation": "post",
+      "status": 401,
+      "body": "plain",
+      "expected": "AttachmentUnauthorized"
+    },
+    {
+      "id": "post-401-body1",
+      "operation": "post",
+      "status": 401,
+      "body": "session_gone",
+      "expected": "AttachmentUnauthorized"
+    },
+    {
+      "id": "post-401-body2",
+      "operation": "post",
+      "status": 401,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "AttachmentUnauthorized"
+    },
+    {
+      "id": "post-409-body0",
+      "operation": "post",
+      "status": 409,
+      "body": "plain",
+      "expected": "SurfaceRevisionRejected"
+    },
+    {
+      "id": "post-409-body1",
+      "operation": "post",
+      "status": 409,
+      "body": "session_gone",
+      "expected": "SurfaceRevisionRejected"
+    },
+    {
+      "id": "post-409-body2",
+      "operation": "post",
+      "status": 409,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "SurfaceRevisionRejected"
+    },
+    {
+      "id": "post-410-body0",
+      "operation": "post",
+      "status": 410,
+      "body": "plain",
+      "expected": "SurfaceUnavailable"
+    },
+    {
+      "id": "post-410-body1",
+      "operation": "post",
+      "status": 410,
+      "body": "session_gone",
+      "expected": "SurfaceUnavailable"
+    },
+    {
+      "id": "post-410-body2",
+      "operation": "post",
+      "status": 410,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "SurfaceUnavailable"
+    },
+    {
+      "id": "post-418-body0",
+      "operation": "post",
+      "status": 418,
+      "body": "plain",
+      "expected": "HumanPlusError"
+    },
+    {
+      "id": "post-418-body1",
+      "operation": "post",
+      "status": 418,
+      "body": "session_gone",
+      "expected": "HumanPlusError"
+    },
+    {
+      "id": "post-418-body2",
+      "operation": "post",
+      "status": 418,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "HumanPlusError"
+    },
+    {
+      "id": "post-500-body0",
+      "operation": "post",
+      "status": 500,
+      "body": "plain",
+      "expected": "HumanPlusError"
+    },
+    {
+      "id": "post-500-body1",
+      "operation": "post",
+      "status": 500,
+      "body": "session_gone",
+      "expected": "HumanPlusError"
+    },
+    {
+      "id": "post-500-body2",
+      "operation": "post",
+      "status": 500,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "HumanPlusError"
+    },
+    {
+      "id": "stream-200-body0",
+      "operation": "stream",
+      "status": 200,
+      "body": "plain",
+      "expected": "success"
+    },
+    {
+      "id": "stream-200-body1",
+      "operation": "stream",
+      "status": 200,
+      "body": "session_gone",
+      "expected": "success"
+    },
+    {
+      "id": "stream-200-body2",
+      "operation": "stream",
+      "status": 200,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "success"
+    },
+    {
+      "id": "stream-204-body0",
+      "operation": "stream",
+      "status": 204,
+      "body": "plain",
+      "expected": "success"
+    },
+    {
+      "id": "stream-204-body1",
+      "operation": "stream",
+      "status": 204,
+      "body": "session_gone",
+      "expected": "success"
+    },
+    {
+      "id": "stream-204-body2",
+      "operation": "stream",
+      "status": 204,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "success"
+    },
+    {
+      "id": "stream-401-body0",
+      "operation": "stream",
+      "status": 401,
+      "body": "plain",
+      "expected": "AttachmentUnauthorized"
+    },
+    {
+      "id": "stream-401-body1",
+      "operation": "stream",
+      "status": 401,
+      "body": "session_gone",
+      "expected": "AttachmentUnauthorized"
+    },
+    {
+      "id": "stream-401-body2",
+      "operation": "stream",
+      "status": 401,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "AttachmentUnauthorized"
+    },
+    {
+      "id": "stream-409-body0",
+      "operation": "stream",
+      "status": 409,
+      "body": "plain",
+      "expected": "SurfaceRevisionRejected"
+    },
+    {
+      "id": "stream-409-body1",
+      "operation": "stream",
+      "status": 409,
+      "body": "session_gone",
+      "expected": "SurfaceRevisionRejected"
+    },
+    {
+      "id": "stream-409-body2",
+      "operation": "stream",
+      "status": 409,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "SurfaceRevisionRejected"
+    },
+    {
+      "id": "stream-410-body0",
+      "operation": "stream",
+      "status": 410,
+      "body": "plain",
+      "expected": "SurfaceUnavailable"
+    },
+    {
+      "id": "stream-410-body1",
+      "operation": "stream",
+      "status": 410,
+      "body": "session_gone",
+      "expected": "SurfaceUnavailable"
+    },
+    {
+      "id": "stream-410-body2",
+      "operation": "stream",
+      "status": 410,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "SurfaceUnavailable"
+    },
+    {
+      "id": "stream-418-body0",
+      "operation": "stream",
+      "status": 418,
+      "body": "plain",
+      "expected": "HumanPlusError"
+    },
+    {
+      "id": "stream-418-body1",
+      "operation": "stream",
+      "status": 418,
+      "body": "session_gone",
+      "expected": "HumanPlusError"
+    },
+    {
+      "id": "stream-418-body2",
+      "operation": "stream",
+      "status": 418,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "HumanPlusError"
+    },
+    {
+      "id": "stream-500-body0",
+      "operation": "stream",
+      "status": 500,
+      "body": "plain",
+      "expected": "HumanPlusError"
+    },
+    {
+      "id": "stream-500-body1",
+      "operation": "stream",
+      "status": 500,
+      "body": "session_gone",
+      "expected": "HumanPlusError"
+    },
+    {
+      "id": "stream-500-body2",
+      "operation": "stream",
+      "status": 500,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "HumanPlusError"
+    },
+    {
+      "id": "notify-200-body0",
+      "operation": "notify",
+      "status": 200,
+      "body": "plain",
+      "expected": "success"
+    },
+    {
+      "id": "notify-200-body1",
+      "operation": "notify",
+      "status": 200,
+      "body": "session_gone",
+      "expected": "success"
+    },
+    {
+      "id": "notify-200-body2",
+      "operation": "notify",
+      "status": 200,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "success"
+    },
+    {
+      "id": "notify-204-body0",
+      "operation": "notify",
+      "status": 204,
+      "body": "plain",
+      "expected": "success"
+    },
+    {
+      "id": "notify-204-body1",
+      "operation": "notify",
+      "status": 204,
+      "body": "session_gone",
+      "expected": "success"
+    },
+    {
+      "id": "notify-204-body2",
+      "operation": "notify",
+      "status": 204,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "success"
+    },
+    {
+      "id": "notify-401-body0",
+      "operation": "notify",
+      "status": 401,
+      "body": "plain",
+      "expected": "AttachmentUnauthorized"
+    },
+    {
+      "id": "notify-401-body1",
+      "operation": "notify",
+      "status": 401,
+      "body": "session_gone",
+      "expected": "AttachmentUnauthorized"
+    },
+    {
+      "id": "notify-401-body2",
+      "operation": "notify",
+      "status": 401,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "AttachmentUnauthorized"
+    },
+    {
+      "id": "notify-409-body0",
+      "operation": "notify",
+      "status": 409,
+      "body": "plain",
+      "expected": "SurfaceRevisionRejected"
+    },
+    {
+      "id": "notify-409-body1",
+      "operation": "notify",
+      "status": 409,
+      "body": "session_gone",
+      "expected": "SurfaceRevisionRejected"
+    },
+    {
+      "id": "notify-409-body2",
+      "operation": "notify",
+      "status": 409,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "SurfaceRevisionRejected"
+    },
+    {
+      "id": "notify-410-body0",
+      "operation": "notify",
+      "status": 410,
+      "body": "plain",
+      "expected": "SurfaceUnavailable"
+    },
+    {
+      "id": "notify-410-body1",
+      "operation": "notify",
+      "status": 410,
+      "body": "session_gone",
+      "expected": "SurfaceUnavailable"
+    },
+    {
+      "id": "notify-410-body2",
+      "operation": "notify",
+      "status": 410,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "SurfaceUnavailable"
+    },
+    {
+      "id": "notify-418-body0",
+      "operation": "notify",
+      "status": 418,
+      "body": "plain",
+      "expected": "HumanPlusError"
+    },
+    {
+      "id": "notify-418-body1",
+      "operation": "notify",
+      "status": 418,
+      "body": "session_gone",
+      "expected": "HumanPlusError"
+    },
+    {
+      "id": "notify-418-body2",
+      "operation": "notify",
+      "status": 418,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "HumanPlusError"
+    },
+    {
+      "id": "notify-500-body0",
+      "operation": "notify",
+      "status": 500,
+      "body": "plain",
+      "expected": "HumanPlusError"
+    },
+    {
+      "id": "notify-500-body1",
+      "operation": "notify",
+      "status": 500,
+      "body": "session_gone",
+      "expected": "HumanPlusError"
+    },
+    {
+      "id": "notify-500-body2",
+      "operation": "notify",
+      "status": 500,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "HumanPlusError"
+    },
+    {
+      "id": "detach-200-body0",
+      "operation": "detach",
+      "status": 200,
+      "body": "plain",
+      "expected": "success"
+    },
+    {
+      "id": "detach-200-body1",
+      "operation": "detach",
+      "status": 200,
+      "body": "session_gone",
+      "expected": "success"
+    },
+    {
+      "id": "detach-200-body2",
+      "operation": "detach",
+      "status": 200,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "success"
+    },
+    {
+      "id": "detach-204-body0",
+      "operation": "detach",
+      "status": 204,
+      "body": "plain",
+      "expected": "success"
+    },
+    {
+      "id": "detach-204-body1",
+      "operation": "detach",
+      "status": 204,
+      "body": "session_gone",
+      "expected": "success"
+    },
+    {
+      "id": "detach-204-body2",
+      "operation": "detach",
+      "status": 204,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "success"
+    },
+    {
+      "id": "detach-401-body0",
+      "operation": "detach",
+      "status": 401,
+      "body": "plain",
+      "expected": "AttachmentUnauthorized"
+    },
+    {
+      "id": "detach-401-body1",
+      "operation": "detach",
+      "status": 401,
+      "body": "session_gone",
+      "expected": "AttachmentUnauthorized"
+    },
+    {
+      "id": "detach-401-body2",
+      "operation": "detach",
+      "status": 401,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "AttachmentUnauthorized"
+    },
+    {
+      "id": "detach-409-body0",
+      "operation": "detach",
+      "status": 409,
+      "body": "plain",
+      "expected": "SurfaceRevisionRejected"
+    },
+    {
+      "id": "detach-409-body1",
+      "operation": "detach",
+      "status": 409,
+      "body": "session_gone",
+      "expected": "SurfaceRevisionRejected"
+    },
+    {
+      "id": "detach-409-body2",
+      "operation": "detach",
+      "status": 409,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "SurfaceRevisionRejected"
+    },
+    {
+      "id": "detach-410-body0",
+      "operation": "detach",
+      "status": 410,
+      "body": "plain",
+      "expected": "success"
+    },
+    {
+      "id": "detach-410-body1",
+      "operation": "detach",
+      "status": 410,
+      "body": "session_gone",
+      "expected": "success"
+    },
+    {
+      "id": "detach-410-body2",
+      "operation": "detach",
+      "status": 410,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "success"
+    },
+    {
+      "id": "detach-418-body0",
+      "operation": "detach",
+      "status": 418,
+      "body": "plain",
+      "expected": "HumanPlusError"
+    },
+    {
+      "id": "detach-418-body1",
+      "operation": "detach",
+      "status": 418,
+      "body": "session_gone",
+      "expected": "HumanPlusError"
+    },
+    {
+      "id": "detach-418-body2",
+      "operation": "detach",
+      "status": 418,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "HumanPlusError"
+    },
+    {
+      "id": "detach-500-body0",
+      "operation": "detach",
+      "status": 500,
+      "body": "plain",
+      "expected": "HumanPlusError"
+    },
+    {
+      "id": "detach-500-body1",
+      "operation": "detach",
+      "status": 500,
+      "body": "session_gone",
+      "expected": "HumanPlusError"
+    },
+    {
+      "id": "detach-500-body2",
+      "operation": "detach",
+      "status": 500,
+      "body": "PRIVATE-B3-not-session_gone",
+      "expected": "HumanPlusError"
+    }
+  ],
+  "addresses": [
+    {
+      "id": "public-v4",
+      "address": "8.8.8.8",
+      "publicAddress": true
+    },
+    {
+      "id": "public-v6",
+      "address": "2606:4700:4700::1111",
+      "publicAddress": true
+    },
+    {
+      "id": "loopback-v4",
+      "address": "127.0.0.1",
+      "publicAddress": false
+    },
+    {
+      "id": "private-v4",
+      "address": "10.0.0.1",
+      "publicAddress": false
+    },
+    {
+      "id": "link-local",
+      "address": "169.254.169.254",
+      "publicAddress": false
+    },
+    {
+      "id": "cgnat-start",
+      "address": "100.64.0.0",
+      "publicAddress": false
+    },
+    {
+      "id": "cgnat-metadata",
+      "address": "100.100.100.200",
+      "publicAddress": false
+    },
+    {
+      "id": "cgnat-end",
+      "address": "100.127.255.255",
+      "publicAddress": false
+    },
+    {
+      "id": "multicast-v4",
+      "address": "224.0.0.1",
+      "publicAddress": false
+    },
+    {
+      "id": "reserved-v4",
+      "address": "240.0.0.1",
+      "publicAddress": false
+    },
+    {
+      "id": "documentation-v4",
+      "address": "192.0.2.1",
+      "publicAddress": false
+    },
+    {
+      "id": "loopback-v6",
+      "address": "::1",
+      "publicAddress": false
+    },
+    {
+      "id": "ula-v6",
+      "address": "fc00::1",
+      "publicAddress": false
+    },
+    {
+      "id": "linklocal-v6",
+      "address": "fe80::1",
+      "publicAddress": false
+    },
+    {
+      "id": "sitelocal-v6",
+      "address": "fec0::1",
+      "publicAddress": false
+    },
+    {
+      "id": "multicast-v6",
+      "address": "ff02::1",
+      "publicAddress": false
+    },
+    {
+      "id": "documentation-v6",
+      "address": "2001:db8::1",
+      "publicAddress": false
+    },
+    {
+      "id": "discard-v6",
+      "address": "100::1",
+      "publicAddress": false
+    },
+    {
+      "id": "mapped-private",
+      "address": "::ffff:127.0.0.1",
+      "publicAddress": false
+    },
+    {
+      "id": "nat64-private",
+      "address": "64:ff9b::a9fe:a9fe",
+      "publicAddress": false
+    },
+    {
+      "id": "nat64-public",
+      "address": "64:ff9b::808:808",
+      "publicAddress": true
+    },
+    {
+      "id": "6to4-private",
+      "address": "2002:a9fe:a9fe::1",
+      "publicAddress": false
+    },
+    {
+      "id": "6to4-public",
+      "address": "2002:808:808::1",
+      "publicAddress": true
+    },
+    {
+      "id": "mapped-public",
+      "address": "::ffff:8.8.8.8",
+      "expectedPublic": true
+    },
+    {
+      "id": "local-nat64",
+      "address": "64:ff9b:1::808:808",
+      "expectedPublic": false
+    },
+    {
+      "id": "teredo",
+      "address": "2001::808:808",
+      "expectedPublic": false
+    },
+    {
+      "id": "benchmark",
+      "address": "198.18.0.1",
+      "expectedPublic": false
+    },
+    {
+      "id": "protocol",
+      "address": "192.0.0.1",
+      "expectedPublic": false
+    },
+    {
+      "id": "documentation2",
+      "address": "198.51.100.1",
+      "expectedPublic": false
+    },
+    {
+      "id": "documentation3",
+      "address": "203.0.113.1",
+      "expectedPublic": false
+    }
+  ],
+  "dnsProfiles": [
+    {
+      "id": "dns-public-v4",
+      "answers": [
+        [
+          "8.8.8.8"
+        ]
+      ],
+      "expectedPublic": true
+    },
+    {
+      "id": "dns-public-v6",
+      "answers": [
+        [
+          "2606:4700:4700::1111"
+        ]
+      ],
+      "expectedPublic": true
+    },
+    {
+      "id": "dns-loopback-v4",
+      "answers": [
+        [
+          "127.0.0.1"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-private-v4",
+      "answers": [
+        [
+          "10.0.0.1"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-link-local",
+      "answers": [
+        [
+          "169.254.169.254"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-cgnat-start",
+      "answers": [
+        [
+          "100.64.0.0"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-cgnat-metadata",
+      "answers": [
+        [
+          "100.100.100.200"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-cgnat-end",
+      "answers": [
+        [
+          "100.127.255.255"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-multicast-v4",
+      "answers": [
+        [
+          "224.0.0.1"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-reserved-v4",
+      "answers": [
+        [
+          "240.0.0.1"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-documentation-v4",
+      "answers": [
+        [
+          "192.0.2.1"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-loopback-v6",
+      "answers": [
+        [
+          "::1"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-ula-v6",
+      "answers": [
+        [
+          "fc00::1"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-linklocal-v6",
+      "answers": [
+        [
+          "fe80::1"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-sitelocal-v6",
+      "answers": [
+        [
+          "fec0::1"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-multicast-v6",
+      "answers": [
+        [
+          "ff02::1"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-documentation-v6",
+      "answers": [
+        [
+          "2001:db8::1"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-discard-v6",
+      "answers": [
+        [
+          "100::1"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-mapped-private",
+      "answers": [
+        [
+          "::ffff:127.0.0.1"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-nat64-private",
+      "answers": [
+        [
+          "64:ff9b::a9fe:a9fe"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-nat64-public",
+      "answers": [
+        [
+          "64:ff9b::808:808"
+        ]
+      ],
+      "expectedPublic": true
+    },
+    {
+      "id": "dns-6to4-private",
+      "answers": [
+        [
+          "2002:a9fe:a9fe::1"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-6to4-public",
+      "answers": [
+        [
+          "2002:808:808::1"
+        ]
+      ],
+      "expectedPublic": true
+    },
+    {
+      "id": "dns-empty",
+      "answers": [
+        []
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-invalid",
+      "answers": [
+        [
+          "not-an-address"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-mixed",
+      "answers": [
+        [
+          "8.8.8.8",
+          "127.0.0.1"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-failure",
+      "answers": [
+        false
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-rebind-before-get",
+      "answers": [
+        [
+          "8.8.8.8"
+        ],
+        [
+          "127.0.0.1"
+        ]
+      ],
+      "expectedPublic": false,
+      "expectedPosts": 1,
+      "expectedStreams": 0
+    },
+    {
+      "id": "explicit-unverified-name",
+      "answers": [
+        false
+      ],
+      "proxy": null,
+      "allowUnverified": true,
+      "expectedPublic": true,
+      "expectedDnsCalls": 0
+    },
+    {
+      "id": "proxy-required",
+      "answers": [
+        [
+          "8.8.8.8"
+        ]
+      ],
+      "proxy": null,
+      "expectedPublic": false,
+      "expectedDnsCalls": 0
+    },
+    {
+      "id": "url-query-refused",
+      "url": "https://relay.fixture.invalid?private=fixture",
+      "answers": [
+        [
+          "8.8.8.8"
+        ]
+      ],
+      "expectedPublic": false,
+      "expectedDnsCalls": 0
+    },
+    {
+      "id": "literal-public-v4",
+      "url": "https://8.8.8.8",
+      "allowedHosts": [
+        "8.8.8.8"
+      ],
+      "answers": [
+        false
+      ],
+      "expectedPublic": true,
+      "expectedDnsCalls": 0
+    },
+    {
+      "id": "literal-public-v6",
+      "url": "https://[2606:4700:4700::1111]",
+      "allowedHosts": [
+        "[2606:4700:4700::1111]",
+        "2606:4700:4700::1111"
+      ],
+      "answers": [
+        false
+      ],
+      "expectedPublic": true,
+      "expectedDnsCalls": 0
+    },
+    {
+      "id": "literal-private-v4",
+      "url": "https://127.0.0.1",
+      "allowedHosts": [
+        "127.0.0.1"
+      ],
+      "answers": [
+        false
+      ],
+      "expectedPublic": false,
+      "expectedDnsCalls": 0
+    },
+    {
+      "id": "explicit-local-http",
+      "url": "http://127.0.0.1:8080",
+      "allowedHosts": [
+        "127.0.0.1"
+      ],
+      "allowedPorts": [
+        8080
+      ],
+      "proxy": null,
+      "allowUnverified": true,
+      "allowInsecureLoopback": true,
+      "answers": [
+        false
+      ],
+      "expectedPublic": true,
+      "expectedDnsCalls": 0
+    },
+    {
+      "id": "unverified-https-private-still-refused",
+      "url": "https://127.0.0.1",
+      "allowedHosts": [
+        "127.0.0.1"
+      ],
+      "allowUnverified": true,
+      "answers": [
+        false
+      ],
+      "expectedPublic": false,
+      "expectedDnsCalls": 0
+    },
+    {
+      "id": "dns-mapped-public",
+      "answers": [
+        [
+          "::ffff:8.8.8.8"
+        ]
+      ],
+      "expectedPublic": true
+    },
+    {
+      "id": "dns-local-nat64",
+      "answers": [
+        [
+          "64:ff9b:1::808:808"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-teredo",
+      "answers": [
+        [
+          "2001::808:808"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-benchmark",
+      "answers": [
+        [
+          "198.18.0.1"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-protocol",
+      "answers": [
+        [
+          "192.0.0.1"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-documentation2",
+      "answers": [
+        [
+          "198.51.100.1"
+        ]
+      ],
+      "expectedPublic": false
+    },
+    {
+      "id": "dns-documentation3",
+      "answers": [
+        [
+          "203.0.113.1"
+        ]
+      ],
+      "expectedPublic": false
+    }
+  ]
+}

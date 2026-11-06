@@ -7,9 +7,7 @@ namespace Prism\HumanPlus\Transport;
 use GuzzleHttp\ClientInterface;
 use Prism\HumanPlus\Contracts\RelayTransport;
 use Prism\HumanPlus\Data\SurfaceAttachment;
-use Prism\HumanPlus\Exceptions\AttachmentUnauthorized;
 use Prism\HumanPlus\Exceptions\HumanPlusException;
-use Prism\HumanPlus\Exceptions\SurfaceUnavailable;
 
 /**
  * Fancy's client-scoped SSE + POST relay transport.
@@ -155,27 +153,56 @@ final readonly class SsePostRelayTransport implements RelayTransport
         curl_multi_add_handle($multi, $get);
         $postAdded = false;
         $running = null;
-        $getStatus = 0;
-        $postStatus = 0;
+        $getDone = false;
+        $postDone = false;
+        $getResult = CURLE_OK;
+        $postResult = CURLE_OK;
         $deadline = microtime(true) + $this->timeoutSeconds;
         try {
             do {
-                curl_multi_exec($multi, $running);
+                if (curl_multi_exec($multi, $running) !== CURLM_OK) {
+                    throw new HumanPlusException('Fancy relay transport failed.');
+                }
                 if ($headersReady && ! $postAdded) {
+                    // Native mode opens GET first. Recheck the name before the second HTTP leg.
+                    $this->endpoint->base($attachment);
                     curl_multi_add_handle($multi, $post);
                     $postAdded = true;
                 }
-                if ($decoded !== null) {
-                    return $decoded;
+                while (($completed = curl_multi_info_read($multi)) !== false) {
+                    if ($completed['handle'] === $post) {
+                        $postDone = true;
+                        $postResult = $completed['result'];
+                    } elseif ($completed['handle'] === $get) {
+                        $getDone = true;
+                        $getResult = $completed['result'];
+                    }
+                }
+                if ($postDone) {
+                    // A correlated GET frame is not acceptance of the POST that caused it.
+                    $this->endpoint->assertStatus((int) curl_getinfo($post, CURLINFO_RESPONSE_CODE));
+                    if ($postResult !== CURLE_OK) {
+                        throw new HumanPlusException('Fancy relay POST transport failed.');
+                    }
+                    $getStatus = (int) curl_getinfo($get, CURLINFO_RESPONSE_CODE);
+                    if ($getStatus !== 0) {
+                        $this->endpoint->assertStatus($getStatus);
+                    }
+                    if ($decoded !== null && $getStatus >= 200 && $getStatus < 300) {
+                        return $decoded;
+                    }
+                    if ($getDone) {
+                        throw new HumanPlusException('Fancy relay stream ended before the correlated response arrived.');
+                    }
+                } elseif ($getDone && ! $postAdded && $getResult !== CURLE_OK) {
+                    throw new HumanPlusException('Fancy relay GET transport failed.');
                 }
                 if (microtime(true) >= $deadline) {
                     throw new HumanPlusException('Fancy relay timed out before the correlated response arrived.');
                 }
                 curl_multi_select($multi, 0.1);
-            } while ($running > 0 || ! $postAdded);
+            } while ($running > 0 || ! $postDone);
         } finally {
-            $getStatus = (int) curl_getinfo($get, CURLINFO_RESPONSE_CODE);
-            $postStatus = (int) curl_getinfo($post, CURLINFO_RESPONSE_CODE);
             curl_multi_remove_handle($multi, $get);
             if ($postAdded) {
                 curl_multi_remove_handle($multi, $post);
@@ -183,14 +210,6 @@ final readonly class SsePostRelayTransport implements RelayTransport
             curl_close($get);
             curl_close($post);
             curl_multi_close($multi);
-        }
-
-        $status = $getStatus !== 0 ? $getStatus : $postStatus;
-        if ($status === 401) {
-            throw new AttachmentUnauthorized('The Fancy surface attachment is unauthorized.');
-        }
-        if ($status === 410) {
-            throw new SurfaceUnavailable('The Fancy surface is gone; this attachment cannot resume.');
         }
         throw new HumanPlusException('Fancy relay stream ended before the correlated response arrived.');
     }
