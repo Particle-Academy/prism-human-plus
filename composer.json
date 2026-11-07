@@ -11,7 +11,7 @@
         "ext-mbstring": "*",
         "guzzlehttp/guzzle": "^7.9|^8.0",
         "laravel/framework": "^12.69.0|^13.30.0",
-        "particle-academy/prism": ">=0.114 <1.0",
+        "particle-academy/prism": ">=0.114 <1.0 || ^0.147",
         "psr/http-message": "^1.1|^2.0"
     },
     "require-dev": {
