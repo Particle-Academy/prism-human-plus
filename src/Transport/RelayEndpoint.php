@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Prism\HumanPlus\Transport;
 
+use Closure;
 use GuzzleHttp\ClientInterface;
 use Prism\HumanPlus\Data\SurfaceAttachment;
 use Prism\HumanPlus\Exceptions\AttachmentUnauthorized;
@@ -11,6 +12,7 @@ use Prism\HumanPlus\Exceptions\HumanPlusException;
 use Prism\HumanPlus\Exceptions\SurfaceRevisionRejected;
 use Prism\HumanPlus\Exceptions\SurfaceUnavailable;
 use Psr\Http\Message\ResponseInterface;
+use Stringable;
 
 /**
  * The relay's address, its egress policy, and every check that stands between
@@ -66,18 +68,20 @@ final readonly class RelayEndpoint
         array $extra = [],
         bool $detach = false,
     ): ResponseInterface {
+        $url = $this->url($attachment, $path, $extra);
         $options = [
             'http_errors' => false,
             'timeout' => $this->timeoutSeconds,
             'headers' => $this->headers($attachment, $frame === null ? [] : ['Content-Type' => 'application/json']),
             ...$this->networkOptions(),
+            ...$this->redirectOptions($url),
         ];
 
         if ($frame !== null) {
             $options['body'] = self::encode($frame);
         }
 
-        $response = $this->http->request('POST', $this->url($attachment, $path, $extra), $options);
+        $response = $this->http->request('POST', $url, $options);
         $this->assertLive($response, $detach);
 
         return $response;
@@ -87,17 +91,22 @@ final readonly class RelayEndpoint
      * GET one of the relay's paths, and assert the relay is still live.
      *
      * @param  array<string, string>  $extra
-     * @param  array<string, mixed>  $options  Merged last, so a caller can
-     *                                         stream or override the timeout.
+     * @param  array<string, mixed>  $options  Merged after the defaults, so a
+     *                                         caller can stream or override the
+     *                                         timeout. Redirect handling is not
+     *                                         overridable.
      */
     public function get(SurfaceAttachment $attachment, string $path, array $extra = [], array $options = []): ResponseInterface
     {
-        $response = $this->http->request('GET', $this->url($attachment, $path, $extra), [
+        $url = $this->url($attachment, $path, $extra);
+        $response = $this->http->request('GET', $url, [
             'http_errors' => false,
             'timeout' => $this->timeoutSeconds,
             'headers' => $this->headers($attachment),
             ...$this->networkOptions(),
             ...$options,
+            // After the caller's options, so the redirect rule always applies.
+            ...$this->redirectOptions($url),
         ]);
         $this->assertLive($response);
 
@@ -182,6 +191,52 @@ final readonly class RelayEndpoint
         return $this->authMode === 'bearer'
             ? ['Authorization: Bearer '.$attachment->invitation->token]
             : [];
+    }
+
+    /**
+     * Redirects are followed only while the scheme, host and effective port
+     * stay those of the URL that was checked. Anything else is refused before
+     * the next request is built, so it never reaches the other server and the
+     * relay policy above is never bypassed by a redirect. Passed per request so
+     * it holds whatever client was injected.
+     *
+     * Every hop is compared with the checked URL rather than the previous hop,
+     * which is the same answer when each hop must match.
+     *
+     * @return array{allow_redirects: array{max: int, on_redirect: Closure}}
+     */
+    public function redirectOptions(string $url): array
+    {
+        $origin = self::origin($url);
+
+        return ['allow_redirects' => [
+            'max' => 5,
+            'on_redirect' => static function (mixed $request, mixed $response, Stringable $next) use ($origin): void {
+                if ($origin === null || self::origin((string) $next) !== $origin) {
+                    throw new HumanPlusException('Fancy relay redirected to a different origin; the redirect was not followed.');
+                }
+            },
+        ]];
+    }
+
+    /**
+     * `scheme://host:port`, with the port made explicit, or null for anything
+     * that is not an absolute http(s) URL.
+     */
+    public static function origin(string $url): ?string
+    {
+        $parts = parse_url($url);
+        if (! is_array($parts) || ! isset($parts['scheme'], $parts['host'])) {
+            return null;
+        }
+        $scheme = strtolower($parts['scheme']);
+        $port = $parts['port'] ?? match ($scheme) {
+            'http' => 80,
+            'https' => 443,
+            default => null,
+        };
+
+        return $port === null ? null : $scheme.'://'.strtolower($parts['host']).':'.$port;
     }
 
     /** @return array{}|array{proxy: string} */
