@@ -108,7 +108,8 @@ final readonly class SsePostRelayTransport implements RelayTransport
         $headersReady = false;
         $get = curl_init($base.'/events?'.$this->endpoint->query($attachment, ['direction' => 'outbound']));
         $post = curl_init($base.'/inbox?'.$this->endpoint->query($attachment));
-        $common = [CURLOPT_TIMEOUT => $this->timeoutSeconds, CURLOPT_HTTPHEADER => $this->curlHeaders($attachment)];
+        // Redirects are not followed on this path at all (also cURL's default).
+        $common = [CURLOPT_TIMEOUT => $this->timeoutSeconds, CURLOPT_FOLLOWLOCATION => false, CURLOPT_HTTPHEADER => $this->curlHeaders($attachment)];
         $proxy = $this->endpoint->proxy();
         if ($proxy !== null) {
             $common[CURLOPT_PROXY] = $proxy;
