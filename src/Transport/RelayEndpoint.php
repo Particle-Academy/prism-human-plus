@@ -77,7 +77,7 @@ final readonly class RelayEndpoint
             'timeout' => $this->timeoutSeconds,
             'headers' => $this->headers($attachment, $frame === null ? [] : ['Content-Type' => 'application/json']),
             ...$this->networkOptions(),
-            ...$this->redirectOptions($url),
+            ...$this->redirectRule($url),
         ];
 
         if ($frame !== null) {
@@ -96,8 +96,11 @@ final readonly class RelayEndpoint
      * @param  array<string, string>  $extra
      * @param  array<string, mixed>  $options  Merged after the defaults, so a
      *                                         caller can stream or override the
-     *                                         timeout. Redirect handling is not
-     *                                         overridable.
+     *                                         timeout. Redirects can be turned
+     *                                         off (`allow_redirects` false, 0, ''
+     *                                         or null) but not widened: any other
+     *                                         value still gets the same-origin
+     *                                         rule.
      */
     public function get(SurfaceAttachment $attachment, string $path, array $extra = [], array $options = []): ResponseInterface
     {
@@ -108,8 +111,9 @@ final readonly class RelayEndpoint
             'headers' => $this->headers($attachment),
             ...$this->networkOptions(),
             ...$options,
-            // After the caller's options, so the redirect rule always applies.
-            ...$this->redirectOptions($url),
+            // After the caller's options, so a caller can turn redirects off
+            // but never widen them.
+            ...$this->redirectRule($url, $options),
         ]);
         $this->assertLive($response);
 
@@ -213,6 +217,30 @@ final readonly class RelayEndpoint
         return $this->authMode === 'bearer'
             ? ['Authorization: Bearer '.$attachment->invitation->token]
             : [];
+    }
+
+    /**
+     * The redirect option for one request: off when the caller's options or
+     * the injected client's own defaults already turn redirects off (any empty
+     * value, as Guzzle reads it: false, 0, '' or null), otherwise
+     * {@see redirectOptions()}. Off is sent as an explicit `false`, so it stays
+     * off whatever the client's defaults are.
+     *
+     * @param  array<string, mixed>  $callerOptions
+     * @return array{allow_redirects: false|array{max: int, on_redirect: Closure}}
+     */
+    private function redirectRule(string $url, array $callerOptions = []): array
+    {
+        if (array_key_exists('allow_redirects', $callerOptions)) {
+            $off = empty($callerOptions['allow_redirects']);
+        } else {
+            // getConfig() is on Guzzle's Client, not on ClientInterface in
+            // every supported major.
+            $config = method_exists($this->http, 'getConfig') ? $this->http->getConfig() : [];
+            $off = is_array($config) && array_key_exists('allow_redirects', $config) && empty($config['allow_redirects']);
+        }
+
+        return $off ? ['allow_redirects' => false] : $this->redirectOptions($url);
     }
 
     /**
