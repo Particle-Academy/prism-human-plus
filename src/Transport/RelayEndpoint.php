@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Prism\HumanPlus\Transport;
 
 use Closure;
+use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 use InvalidArgumentException;
@@ -234,10 +235,10 @@ final readonly class RelayEndpoint
         if (array_key_exists('allow_redirects', $callerOptions)) {
             $off = empty($callerOptions['allow_redirects']);
         } else {
-            // getConfig() is on Guzzle's Client, not on ClientInterface in
-            // every supported major.
-            $config = method_exists($this->http, 'getConfig') ? $this->http->getConfig() : [];
-            $off = is_array($config) && array_key_exists('allow_redirects', $config) && empty($config['allow_redirects']);
+            // getConfig() is on Guzzle's Client in every supported major, but
+            // not on ClientInterface in all of them.
+            $config = $this->http instanceof Client ? $this->http->getConfig() : [];
+            $off = array_key_exists('allow_redirects', $config) && empty($config['allow_redirects']);
         }
 
         return $off ? ['allow_redirects' => false] : $this->redirectOptions($url);
