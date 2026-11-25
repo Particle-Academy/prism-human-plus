@@ -285,3 +285,36 @@ it('reports an unreachable relay as a Human+ failure without the token', functio
         ->and($failure?->getMessage())->not->toContain(RELAY_REDIRECT_TOKEN)
         ->and($failure?->getPrevious())->toBeNull();
 });
+
+it('follows no redirect when a caller turns redirects off in get()', function (mixed $off): void {
+    $endpoint = new RelayEndpoint(new Client, ['127.0.0.1'], 5, [$this->relay->port], null, true, 'bearer');
+    $this->relay->answer([['match' => '/events', 'status' => 307, 'location' => $this->relay->origin().'/relay/demo_001/landed']]);
+
+    [$failure] = relayFailure(fn () => $endpoint->get(redirectRelayAttachment($this->relay), 'events', [], ['allow_redirects' => $off]));
+
+    expect($this->relay->requests())->toHaveCount(1)
+        ->and($this->elsewhere->requests())->toBe([])
+        ->and($failure?->getMessage())->toBe('Fancy relay failed with HTTP 307.');
+})->with([
+    'false' => [false],
+    'zero' => [0],
+    'empty string' => [''],
+    'null' => [null],
+]);
+
+it('follows no redirect when the injected client has redirects off', function (string $call, mixed $off): void {
+    $endpoint = new RelayEndpoint(new Client(['allow_redirects' => $off]), ['127.0.0.1'], 5, [$this->relay->port], null, true, 'bearer');
+    $attachment = redirectRelayAttachment($this->relay);
+    $this->relay->answer([['match' => $call === 'get' ? '/events' : '/inbox', 'status' => 307, 'location' => $this->relay->origin().'/relay/demo_001/landed']]);
+
+    [$failure] = relayFailure(fn () => $call === 'get'
+        ? $endpoint->get($attachment, 'events')
+        : $endpoint->post($attachment, 'inbox', ['jsonrpc' => '2.0', 'method' => 'ping']));
+
+    expect($this->relay->requests())->toHaveCount(1)
+        ->and($this->elsewhere->requests())->toBe([])
+        ->and($failure?->getMessage())->toBe('Fancy relay failed with HTTP 307.');
+})->with(['get', 'post'])->with([
+    'false' => [false],
+    'null' => [null],
+]);
