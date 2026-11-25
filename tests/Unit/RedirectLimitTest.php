@@ -50,4 +50,5 @@ it('reads the hop limit as the one asked for, never more than five', function (m
     "max '3'" => [['max' => '3'], 3],
     'max 5' => [['max' => 5], 5],
     'max 50' => [['max' => 50], 5],
+    'max beyond PHP_INT_MAX as a string' => [['max' => '99999999999999999999'], 5],
 ]);
