@@ -35,6 +35,7 @@ final readonly class SsePostRelayTransport implements RelayTransport
     /**
      * @param  list<string>  $allowedRelayHosts
      * @param  list<int>  $allowedRelayPorts
+     * @param  bool  $followRedirects  False turns relay redirects off; see {@see RelayEndpoint}.
      */
     public function __construct(
         ClientInterface $http,
@@ -46,6 +47,7 @@ final readonly class SsePostRelayTransport implements RelayTransport
         bool $allowUnverifiedEgress = false,
         string $authMode = 'query',
         private bool $useNativeCurl = false,
+        bool $followRedirects = true,
     ) {
         $this->endpoint = new RelayEndpoint(
             $http,
@@ -55,6 +57,7 @@ final readonly class SsePostRelayTransport implements RelayTransport
             $egressProxy,
             $allowUnverifiedEgress,
             $authMode,
+            $followRedirects,
         );
     }
 

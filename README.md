@@ -197,6 +197,16 @@ query string because browser `EventSource` cannot set an Authorization header.
 Use redacted proxy/access logs and never emit relay URLs to telemetry. Relays
 that support header authentication can opt into `authMode: 'bearer'`.
 
+A relay redirect is followed only while the scheme, host and port stay those of
+the checked relay URL, and for at most five hops. A redirect setting on the
+injected Guzzle `Client`, or `allow_redirects` passed to `RelayEndpoint::get()`,
+can turn redirects off or lower the hop limit, read as Guzzle reads it: `false`,
+`null`, `[]`, `['max' => 0]` and any other empty or non-positive `max` are off,
+and a value Guzzle would reject is also off. It can never widen them. A client
+that is not Guzzle's own `Client` (a logging or retry decorator, for example)
+does not expose its setting, so pass `followRedirects: false` to either
+transport to turn relay redirects off whatever the client does.
+
 
 ## What changed since my last turn
 

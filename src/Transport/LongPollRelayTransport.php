@@ -90,6 +90,7 @@ final readonly class LongPollRelayTransport implements RelayTransport
      *                            on. Configurable because this half of the wire
      *                            is the relay's, and a broker that already has
      *                            such an endpoint should not need a fork here.
+     * @param  bool  $followRedirects  False turns relay redirects off; see {@see RelayEndpoint}.
      */
     public function __construct(
         ClientInterface $http,
@@ -102,6 +103,7 @@ final readonly class LongPollRelayTransport implements RelayTransport
         string $authMode = 'query',
         private int $pollWaitSeconds = 5,
         private string $pollPath = 'outbox',
+        bool $followRedirects = true,
     ) {
         $this->endpoint = new RelayEndpoint(
             $http,
@@ -111,6 +113,7 @@ final readonly class LongPollRelayTransport implements RelayTransport
             $egressProxy,
             $allowUnverifiedEgress,
             $authMode,
+            $followRedirects,
         );
     }
 

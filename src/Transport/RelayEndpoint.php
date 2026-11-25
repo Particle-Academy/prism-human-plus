@@ -44,9 +44,18 @@ use Stringable;
  */
 final readonly class RelayEndpoint
 {
+    /** The most redirects a relay request follows, whatever was asked for. */
+    public const MAX_REDIRECTS = 5;
+
     /**
      * @param  list<string>  $allowedRelayHosts
      * @param  list<int>  $allowedRelayPorts
+     * @param  bool  $followRedirects  False turns relay redirects off for every
+     *                                 request, whatever the client or the
+     *                                 caller says. Use it when the injected
+     *                                 client is not Guzzle's `Client` (a
+     *                                 decorator, say), whose own redirect
+     *                                 setting cannot be read from here.
      */
     public function __construct(
         private ClientInterface $http,
@@ -56,6 +65,7 @@ final readonly class RelayEndpoint
         private ?string $egressProxy = null,
         private bool $allowUnverifiedEgress = false,
         private string $authMode = 'query',
+        private bool $followRedirects = true,
     ) {}
 
     /**
@@ -97,11 +107,11 @@ final readonly class RelayEndpoint
      * @param  array<string, string>  $extra
      * @param  array<string, mixed>  $options  Merged after the defaults, so a
      *                                         caller can stream or override the
-     *                                         timeout. Redirects can be turned
-     *                                         off (`allow_redirects` false, 0, ''
-     *                                         or null) but not widened: any other
-     *                                         value still gets the same-origin
-     *                                         rule.
+     *                                         timeout. `allow_redirects` can turn
+     *                                         redirects off or lower the hop
+     *                                         limit (see redirectLimit()) but
+     *                                         never widen them: whatever is
+     *                                         followed stays same-origin.
      */
     public function get(SurfaceAttachment $attachment, string $path, array $extra = [], array $options = []): ResponseInterface
     {
@@ -221,27 +231,73 @@ final readonly class RelayEndpoint
     }
 
     /**
-     * The redirect option for one request: off when the caller's options or
-     * the injected client's own defaults already turn redirects off (any empty
-     * value, as Guzzle reads it: false, 0, '' or null), otherwise
-     * {@see redirectOptions()}. Off is sent as an explicit `false`, so it stays
-     * off whatever the client's defaults are.
+     * The redirect option for one request. The setting in force is the
+     * caller's `allow_redirects` when it passes one (a per-request option
+     * replaces the client's, as in Guzzle), otherwise the injected client's own
+     * default. A client other than Guzzle's `Client` cannot be read, so its
+     * setting is taken as Guzzle's default unless this endpoint was built with
+     * `followRedirects: false`.
+     *
+     * Off is sent as an explicit `false`, so it stays off whatever the client's
+     * defaults are; on is {@see redirectOptions()} with the hop limit asked
+     * for, never more than five.
      *
      * @param  array<string, mixed>  $callerOptions
      * @return array{allow_redirects: false|array{max: int, on_redirect: Closure}}
      */
     private function redirectRule(string $url, array $callerOptions = []): array
     {
+        if (! $this->followRedirects) {
+            return ['allow_redirects' => false];
+        }
         if (array_key_exists('allow_redirects', $callerOptions)) {
-            $off = empty($callerOptions['allow_redirects']);
+            $setting = $callerOptions['allow_redirects'];
         } else {
             // getConfig() is on Guzzle's Client in every supported major, but
             // not on ClientInterface in all of them.
             $config = $this->http instanceof Client ? $this->http->getConfig() : [];
-            $off = array_key_exists('allow_redirects', $config) && empty($config['allow_redirects']);
+            $setting = array_key_exists('allow_redirects', $config) ? $config['allow_redirects'] : true;
+        }
+        $limit = self::redirectLimit($setting);
+
+        return $limit === null ? ['allow_redirects' => false] : $this->redirectOptions($url, $limit);
+    }
+
+    /**
+     * How many redirects an `allow_redirects` value permits, or null for off.
+     *
+     * Read as Guzzle reads it (RedirectMiddleware): an empty value, an empty
+     * array, or an array whose `max` is empty is off; `true` and an array
+     * without `max` mean Guzzle's default of five. Stricter than Guzzle where
+     * Guzzle would throw or misbehave: any other non-array value, and a `max`
+     * that is not a positive whole number (an int, or a string of digits), are
+     * off rather than permission. The result is never more than five.
+     *
+     * The same rule, with the same tests, is kept in prism-mcp and
+     * prism-browser.
+     *
+     * @internal
+     */
+    public static function redirectLimit(mixed $setting): ?int
+    {
+        if ($setting === true) {
+            return self::MAX_REDIRECTS;
+        }
+        if (! is_array($setting) || $setting === []) {
+            return null;
+        }
+        if (! array_key_exists('max', $setting)) {
+            return self::MAX_REDIRECTS;
+        }
+        $max = $setting['max'];
+        if (is_string($max) && preg_match('/^[0-9]+\z/', $max) === 1) {
+            $max = (int) $max;
+        }
+        if (! is_int($max) || $max < 1) {
+            return null;
         }
 
-        return $off ? ['allow_redirects' => false] : $this->redirectOptions($url);
+        return min($max, self::MAX_REDIRECTS);
     }
 
     /**
@@ -256,12 +312,12 @@ final readonly class RelayEndpoint
      *
      * @return array{allow_redirects: array{max: int, on_redirect: Closure}}
      */
-    public function redirectOptions(string $url): array
+    public function redirectOptions(string $url, int $max = self::MAX_REDIRECTS): array
     {
         $origin = self::origin($url);
 
         return ['allow_redirects' => [
-            'max' => 5,
+            'max' => max(1, min($max, self::MAX_REDIRECTS)),
             'on_redirect' => static function (mixed $request, mixed $response, Stringable $next) use ($origin): void {
                 if ($origin === null || self::origin((string) $next) !== $origin) {
                     throw new HumanPlusException('Fancy relay redirected to a different origin; the redirect was not followed.');
