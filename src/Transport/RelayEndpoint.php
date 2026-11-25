@@ -6,12 +6,15 @@ namespace Prism\HumanPlus\Transport;
 
 use Closure;
 use GuzzleHttp\ClientInterface;
+use GuzzleHttp\Exception\GuzzleException;
+use InvalidArgumentException;
 use Prism\HumanPlus\Data\SurfaceAttachment;
 use Prism\HumanPlus\Exceptions\AttachmentUnauthorized;
 use Prism\HumanPlus\Exceptions\HumanPlusException;
 use Prism\HumanPlus\Exceptions\SurfaceRevisionRejected;
 use Prism\HumanPlus\Exceptions\SurfaceUnavailable;
 use Psr\Http\Message\ResponseInterface;
+use ReflectionClass;
 use Stringable;
 
 /**
@@ -81,7 +84,7 @@ final readonly class RelayEndpoint
             $options['body'] = self::encode($frame);
         }
 
-        $response = $this->http->request('POST', $url, $options);
+        $response = $this->send('POST', $url, $options);
         $this->assertLive($response, $detach);
 
         return $response;
@@ -99,7 +102,7 @@ final readonly class RelayEndpoint
     public function get(SurfaceAttachment $attachment, string $path, array $extra = [], array $options = []): ResponseInterface
     {
         $url = $this->url($attachment, $path, $extra);
-        $response = $this->http->request('GET', $url, [
+        $response = $this->send('GET', $url, [
             'http_errors' => false,
             'timeout' => $this->timeoutSeconds,
             'headers' => $this->headers($attachment),
@@ -111,6 +114,25 @@ final readonly class RelayEndpoint
         $this->assertLive($response);
 
         return $response;
+    }
+
+    /**
+     * Send one request, and report anything the HTTP client could not complete
+     * (an unreachable relay, a redirect loop, a Location that is malformed or
+     * not http(s)) as a Human+ failure rather than a client exception.
+     *
+     * The client's exception is not chained: it carries the request, and in
+     * query auth mode the request URL carries the relay token.
+     *
+     * @param  array<string, mixed>  $options
+     */
+    private function send(string $method, string $url, array $options): ResponseInterface
+    {
+        try {
+            return $this->http->request($method, $url, $options);
+        } catch (GuzzleException|InvalidArgumentException $e) {
+            throw new HumanPlusException(sprintf('Fancy relay request failed (%s).', (new ReflectionClass($e))->getShortName()));
+        }
     }
 
     /** @param array<string, string> $extra */
