@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use GuzzleHttp\Client;
+use GuzzleHttp\ClientInterface;
+use GuzzleHttp\Promise\PromiseInterface;
 use Prism\HumanPlus\Contracts\RelayTransport;
 use Prism\HumanPlus\Data\Participant;
 use Prism\HumanPlus\Data\SurfaceAttachment;
@@ -11,6 +13,8 @@ use Prism\HumanPlus\Exceptions\HumanPlusException;
 use Prism\HumanPlus\Transport\LongPollRelayTransport;
 use Prism\HumanPlus\Transport\RelayEndpoint;
 use Prism\HumanPlus\Transport\SsePostRelayTransport;
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
 
 require_once __DIR__.'/../Support/RedirectLoopback.php';
 
@@ -183,10 +187,9 @@ function hostileLocation(string $location, RedirectLoopback $relay, RedirectLoop
     ]);
 }
 
-it('refuses a hostile relay redirect before any further request', function (string $call, string $location): void {
-    $path = $call === 'notify' ? '/inbox' : '/events';
+it('refuses a hostile relay redirect before any further request', function (string $kind, string $call, string $path, string $authMode, string $location): void {
     $this->relay->answer([['match' => $path, 'status' => 307, 'location' => hostileLocation($location, $this->relay, $this->elsewhere)]]);
-    $transport = redirectRelayTransport('sse', $this->relay, 'bearer');
+    $transport = redirectRelayTransport($kind, $this->relay, $authMode);
     $attachment = redirectRelayAttachment($this->relay);
     $frame = ['jsonrpc' => '2.0', 'id' => 7, 'method' => 'tools/list'];
 
@@ -194,15 +197,25 @@ it('refuses a hostile relay redirect before any further request', function (stri
         ? fn () => $transport->notify($attachment, $frame)
         : fn () => $transport->exchange($attachment, $frame));
 
-    // The stream also posts the frame, so the relay can see more than one
+    // An exchange also posts the frame, so the relay can see more than one
     // request; what it must never see is the redirect being followed.
     $relayPaths = array_map(fn (array $request): string => (string) parse_url($request['uri'], PHP_URL_PATH), $this->relay->requests());
 
     expect($this->elsewhere->requests())->toBe([])
+        ->and($this->elsewhere->received())->not->toContain(RELAY_REDIRECT_TOKEN)
         ->and($relayPaths)->not->toContain('/landed')
         ->and($failure)->toBeInstanceOf(HumanPlusException::class)
         ->and($failure?->getMessage())->not->toContain(RELAY_REDIRECT_TOKEN);
-})->with(['notify', 'stream'])->with(HOSTILE_RELAY_LOCATIONS);
+})->with([
+    'notify, bearer' => ['sse', 'notify', '/inbox', 'bearer'],
+    'notify, query' => ['sse', 'notify', '/inbox', 'query'],
+    'stream, bearer' => ['sse', 'exchange', '/events', 'bearer'],
+    'stream, query' => ['sse', 'exchange', '/events', 'query'],
+    'long poll inbox, bearer' => ['long-poll', 'exchange', '/inbox', 'bearer'],
+    'long poll inbox, query' => ['long-poll', 'exchange', '/inbox', 'query'],
+    'long poll outbox, bearer' => ['long-poll', 'exchange', '/outbox', 'bearer'],
+    'long poll outbox, query' => ['long-poll', 'exchange', '/outbox', 'query'],
+])->with(HOSTILE_RELAY_LOCATIONS);
 
 /*
  * These name the other server only in a part of the URL that is not the host:
@@ -295,12 +308,7 @@ it('follows no redirect when a caller turns redirects off in get()', function (m
     expect($this->relay->requests())->toHaveCount(1)
         ->and($this->elsewhere->requests())->toBe([])
         ->and($failure?->getMessage())->toBe('Fancy relay failed with HTTP 307.');
-})->with([
-    'false' => [false],
-    'zero' => [0],
-    'empty string' => [''],
-    'null' => [null],
-]);
+})->with('redirectsOffAtTheSeam');
 
 it('follows no redirect when the injected client has redirects off', function (string $call, mixed $off): void {
     $endpoint = new RelayEndpoint(new Client(['allow_redirects' => $off]), ['127.0.0.1'], 5, [$this->relay->port], null, true, 'bearer');
@@ -314,7 +322,122 @@ it('follows no redirect when the injected client has redirects off', function (s
     expect($this->relay->requests())->toHaveCount(1)
         ->and($this->elsewhere->requests())->toBe([])
         ->and($failure?->getMessage())->toBe('Fancy relay failed with HTTP 307.');
-})->with(['get', 'post'])->with([
+})->with(['get', 'post'])->with('redirectsOffAtTheSeam');
+
+dataset('redirectsOffAtTheSeam', [
     'false' => [false],
     'null' => [null],
+    'zero' => [0],
+    'empty string' => [''],
+    'string false' => ['false'],
+    'empty array' => [[]],
+    'max 0' => [['max' => 0]],
+    'max null' => [['max' => null]],
+    'max -1' => [['max' => -1]],
+    "max '0'" => [['max' => '0']],
+]);
+
+/** A same-origin chain: $first -> hop1 -> ... -> hop{$hops}, which answers 200. */
+function sameOriginChain(RedirectLoopback $relay, string $first, int $hops): void
+{
+    $rules = [['match' => $first, 'status' => 307, 'location' => '/relay/demo_001/hop1']];
+    for ($i = 1; $i < $hops; $i++) {
+        $rules[] = ['match' => "/hop{$i}", 'status' => 307, 'location' => '/relay/demo_001/hop'.($i + 1)];
+    }
+    $relay->answer($rules);
+}
+
+it('keeps a smaller hop limit from the call', function (mixed $option, int $limit): void {
+    $endpoint = new RelayEndpoint(new Client, ['127.0.0.1'], 5, [$this->relay->port], null, true, 'bearer');
+    sameOriginChain($this->relay, '/events', $limit + 1);
+
+    [$failure] = relayFailure(fn () => $endpoint->get(redirectRelayAttachment($this->relay), 'events', [], ['allow_redirects' => $option]));
+
+    expect($this->relay->requests())->toHaveCount($limit + 1)
+        ->and($failure)->toBeInstanceOf(HumanPlusException::class);
+})->with([
+    'max 1' => [['max' => 1], 1],
+    "max '2'" => [['max' => '2'], 2],
+    'max 50 is held at 5' => [['max' => 50], 5],
+]);
+
+it('keeps a smaller hop limit from the injected client', function (string $call): void {
+    $endpoint = new RelayEndpoint(new Client(['allow_redirects' => ['max' => 1]]), ['127.0.0.1'], 5, [$this->relay->port], null, true, 'bearer');
+    $attachment = redirectRelayAttachment($this->relay);
+    sameOriginChain($this->relay, $call === 'get' ? '/events' : '/inbox', 2);
+
+    [$failure] = relayFailure(fn () => $call === 'get'
+        ? $endpoint->get($attachment, 'events')
+        : $endpoint->post($attachment, 'inbox', ['jsonrpc' => '2.0', 'method' => 'ping']));
+
+    expect($this->relay->requests())->toHaveCount(2)
+        ->and($failure)->toBeInstanceOf(HumanPlusException::class);
+})->with(['get', 'post']);
+
+it('follows a same-origin chain within the limit', function (): void {
+    $endpoint = new RelayEndpoint(new Client, ['127.0.0.1'], 5, [$this->relay->port], null, true, 'bearer');
+    sameOriginChain($this->relay, '/events', 5);
+
+    $endpoint->get(redirectRelayAttachment($this->relay), 'events');
+
+    expect($this->relay->requests())->toHaveCount(6);
+});
+
+/** A client that forwards to an inner client, and does not expose its configuration. */
+final class DecoratedRelayClient implements ClientInterface
+{
+    public function __construct(private readonly ClientInterface $inner) {}
+
+    public function send(RequestInterface $request, array $options = []): ResponseInterface
+    {
+        return $this->inner->send($request, $options);
+    }
+
+    public function sendAsync(RequestInterface $request, array $options = []): PromiseInterface
+    {
+        return $this->inner->sendAsync($request, $options);
+    }
+
+    public function request(string $method, $uri, array $options = []): ResponseInterface
+    {
+        return $this->inner->request($method, $uri, $options);
+    }
+
+    public function requestAsync(string $method, $uri, array $options = []): PromiseInterface
+    {
+        return $this->inner->requestAsync($method, $uri, $options);
+    }
+
+    public function getConfig(?string $option = null)
+    {
+        return null;
+    }
+}
+
+it('follows no redirect when followRedirects is false, whatever client is injected', function (string $kind, string $path): void {
+    $http = new DecoratedRelayClient(new Client(['allow_redirects' => false]));
+    $this->relay->answer([['match' => $path, 'status' => 307, 'location' => $this->relay->origin().'/relay/demo_001/landed']]);
+    $transport = match ($kind) {
+        'endpoint' => new RelayEndpoint($http, ['127.0.0.1'], 5, [$this->relay->port], null, true, 'bearer', followRedirects: false),
+        'sse' => new SsePostRelayTransport($http, ['127.0.0.1'], 5, allowedRelayPorts: [$this->relay->port], allowUnverifiedEgress: true, authMode: 'bearer', followRedirects: false),
+        'long-poll' => new LongPollRelayTransport($http, ['127.0.0.1'], 5, allowedRelayPorts: [$this->relay->port], allowUnverifiedEgress: true, authMode: 'bearer', pollWaitSeconds: 1, followRedirects: false),
+    };
+    $attachment = redirectRelayAttachment($this->relay);
+    $frame = ['jsonrpc' => '2.0', 'id' => 7, 'method' => 'tools/list'];
+
+    [$failure] = relayFailure(fn () => match ($kind) {
+        'endpoint' => $transport->get($attachment, 'events', [], ['allow_redirects' => true]),
+        default => $transport->exchange($attachment, $frame),
+    });
+
+    $relayPaths = array_map(fn (array $request): string => (string) parse_url($request['uri'], PHP_URL_PATH), $this->relay->requests());
+
+    expect($relayPaths)->not->toContain('/relay/demo_001/landed')
+        ->and($failure?->getMessage())->toBe('Fancy relay failed with HTTP 307.');
+})->with([
+    'endpoint get, the caller asks for redirects' => ['endpoint', '/events'],
+    'sse stream' => ['sse', '/events'],
+    'sse inbox' => ['sse', '/inbox'],
+    'long poll inbox' => ['long-poll', '/inbox'],
+    'long poll outbox' => ['long-poll', '/outbox'],
 ]);
