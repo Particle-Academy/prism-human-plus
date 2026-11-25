@@ -32,6 +32,8 @@ dataset('redirectsOff', [
     "max 'abc'" => [['max' => 'abc']],
     'max 1.5' => [['max' => 1.5]],
     "max '-1'" => [['max' => '-1']],
+    "max ' 3'" => [['max' => ' 3']],
+    'max 3 and a newline' => [['max' => "3\n"]],
 ]);
 
 it('reads every redirects-off form as off', function (mixed $value): void {
