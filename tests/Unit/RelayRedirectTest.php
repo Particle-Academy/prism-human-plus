@@ -148,7 +148,6 @@ it('follows a relay redirect that keeps the scheme, host and port', function ():
 const HOSTILE_RELAY_LOCATIONS = [
     'scheme-relative' => ['//{E}/landed'],
     'backslashes for slashes' => ['http:\\\\{E}/landed'],
-    'backslash path' => ['/\\{E}/landed'],
     'relay as userinfo' => ['http://{A}@{E}/landed'],
     'relay host as userinfo' => ['http://{AH}@{E}/landed'],
     'fragment before @' => ['http://{E}#@{A}/landed'],
@@ -206,10 +205,13 @@ it('refuses a hostile relay redirect before any further request', function (stri
 })->with(['notify', 'stream'])->with(HOSTILE_RELAY_LOCATIONS);
 
 /*
- * These two put the other server in the userinfo, so the host they name is the
- * relay's own. Following them is allowed; reaching the other server is not.
+ * These name the other server only in a part of the URL that is not the host:
+ * the userinfo, or (for `/\other`) a path that some client versions reject and
+ * newer ones resolve on the relay. Whether the client refuses them or follows
+ * them to the relay depends on its version; reaching the other server never
+ * happens.
  */
-it('never sends a userinfo-shaped redirect to the host inside the userinfo', function (string $location): void {
+it('never sends a redirect to a host named outside the authority', function (string $location): void {
     $this->relay->answer([['match' => '/inbox', 'status' => 307, 'location' => hostileLocation($location, $this->relay, $this->elsewhere)]]);
 
     relayFailure(fn () => redirectRelayTransport('sse', $this->relay, 'bearer')
@@ -220,6 +222,7 @@ it('never sends a userinfo-shaped redirect to the host inside the userinfo', fun
 })->with([
     'backslash before @' => ['http://{E}\@{A}/landed'],
     'encoded # before @' => ['http://{E}%23@{A}/landed'],
+    'backslash path' => ['/\\{E}/landed'],
 ]);
 
 it('follows a same-origin relay redirect however it is spelled', function (string $location): void {
